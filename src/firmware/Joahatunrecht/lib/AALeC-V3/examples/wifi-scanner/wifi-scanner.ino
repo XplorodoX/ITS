@@ -1,7 +1,6 @@
 #include "ESP8266WiFi.h"
 #include <AALeC-V3.h>
 
-
 void setup()
 {
   aalec.init();

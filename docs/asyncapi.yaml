@@ -1,0 +1,312 @@
+asyncapi: "3.0.0"
+
+info:
+  title: AALeC Quiz API
+  version: "1.0.0"
+  description: |
+    MQTT-based multiplayer quiz system for AALeC hardware (ESP8266).
+    The Game Master publishes questions and state transitions.
+    AALeC devices submit answers. The Beamer subscribes read-only.
+
+servers:
+  broker:
+    host: "localhost:1883"
+    protocol: mqtt
+    description: Eclipse Mosquitto (TCP — for firmware clients)
+  brokerWs:
+    host: "localhost:9001"
+    protocol: mqtts
+    description: Eclipse Mosquitto (WebSocket — for beamer frontend)
+
+channels:
+  quiz/state:
+    address: quiz/state
+    description: Current game state. Published on every state transition.
+    messages:
+      stateMessage:
+        $ref: "#/components/messages/GameState"
+
+  quiz/question:
+    address: quiz/question
+    description: Active question with answer options. Published when a new question starts.
+    messages:
+      questionMessage:
+        $ref: "#/components/messages/Question"
+
+  quiz/reveal:
+    address: quiz/reveal
+    description: Correct answer and per-option answer counts after voting closes.
+    messages:
+      revealMessage:
+        $ref: "#/components/messages/Reveal"
+
+  quiz/scores:
+    address: quiz/scores
+    description: Current scoreboard, sorted by score descending.
+    messages:
+      scoresMessage:
+        $ref: "#/components/messages/Scores"
+
+  quiz/answer/{deviceId}:
+    address: "quiz/answer/{deviceId}"
+    description: Answer submission from a single AALeC device.
+    parameters:
+      deviceId:
+        description: Chip-ID of the AALeC device, formatted as aAlec-<hex>
+    messages:
+      answerMessage:
+        $ref: "#/components/messages/Answer"
+
+  quiz/connect/{deviceId}:
+    address: "quiz/connect/{deviceId}"
+    description: Device registration. Published by the device on boot during WAITING state.
+    parameters:
+      deviceId:
+        description: Chip-ID of the AALeC device
+    messages:
+      connectMessage:
+        $ref: "#/components/messages/Connect"
+
+  quiz/disconnect/{deviceId}:
+    address: "quiz/disconnect/{deviceId}"
+    description: |
+      Last Will and Testament topic. The broker publishes this automatically
+      when the device loses its connection.
+    parameters:
+      deviceId:
+        description: Chip-ID of the AALeC device
+    messages:
+      disconnectMessage:
+        $ref: "#/components/messages/Disconnect"
+
+operations:
+  # Game Master → publishes
+  publishState:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1state"
+    summary: Game Master publishes state transitions
+
+  publishQuestion:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1question"
+    summary: Game Master publishes a new question
+
+  publishReveal:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1reveal"
+    summary: Game Master publishes correct answer and counts
+
+  publishScores:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1scores"
+    summary: Game Master publishes current scoreboard
+
+  # AALeC device → publishes
+  submitAnswer:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1answer~1{deviceId}"
+    summary: AALeC device submits its selected answer
+
+  registerDevice:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1connect~1{deviceId}"
+    summary: AALeC device registers itself on boot
+
+  # Game Master → subscribes
+  receiveAnswer:
+    action: receive
+    channel:
+      $ref: "#/channels/quiz~1answer~1{deviceId}"
+    summary: Game Master collects answers from all devices
+
+  receiveConnect:
+    action: receive
+    channel:
+      $ref: "#/channels/quiz~1connect~1{deviceId}"
+    summary: Game Master registers new players
+
+  receiveDisconnect:
+    action: receive
+    channel:
+      $ref: "#/channels/quiz~1disconnect~1{deviceId}"
+    summary: Game Master handles device disconnects (LWT)
+
+components:
+  messages:
+    GameState:
+      name: GameState
+      summary: Current game state with optional countdown
+      payload:
+        $ref: "#/components/schemas/GameStatePayload"
+
+    Question:
+      name: Question
+      summary: A quiz question with answer options and time limit
+      payload:
+        $ref: "#/components/schemas/QuestionPayload"
+
+    Reveal:
+      name: Reveal
+      summary: Correct answer key and vote counts per option
+      payload:
+        $ref: "#/components/schemas/RevealPayload"
+
+    Scores:
+      name: Scores
+      summary: Scoreboard sorted by score descending
+      payload:
+        $ref: "#/components/schemas/ScoresPayload"
+
+    Answer:
+      name: Answer
+      summary: Answer submission from one device
+      payload:
+        $ref: "#/components/schemas/AnswerPayload"
+
+    Connect:
+      name: Connect
+      summary: Device registration payload
+      payload:
+        $ref: "#/components/schemas/ConnectPayload"
+
+    Disconnect:
+      name: Disconnect
+      summary: LWT payload (empty — topic presence signals disconnect)
+      payload:
+        type: object
+
+  schemas:
+    GameStatePayload:
+      type: object
+      required: [state, question_id, remaining_s]
+      properties:
+        state:
+          type: string
+          enum: [WAITING, QUESTION, VOTING, REVEAL, SCORES, ENDED]
+          example: VOTING
+        question_id:
+          type: integer
+          example: 3
+        remaining_s:
+          type: integer
+          description: Seconds remaining in current voting window (0 when not voting)
+          example: 14
+      example:
+        state: VOTING
+        question_id: 3
+        remaining_s: 14
+
+    QuestionPayload:
+      type: object
+      required: [id, text, options, time_limit_s]
+      properties:
+        id:
+          type: integer
+          example: 3
+        text:
+          type: string
+          example: "Was ist die Hauptstadt von Frankreich?"
+        options:
+          type: object
+          properties:
+            A: { type: string, example: "Berlin" }
+            B: { type: string, example: "Paris" }
+            C: { type: string, example: "Madrid" }
+            D: { type: string, example: "Rom" }
+        time_limit_s:
+          type: integer
+          example: 20
+      example:
+        id: 3
+        text: "Was ist die Hauptstadt von Frankreich?"
+        options:
+          A: Berlin
+          B: Paris
+          C: Madrid
+          D: Rom
+        time_limit_s: 20
+
+    RevealPayload:
+      type: object
+      required: [question_id, correct, counts]
+      properties:
+        question_id:
+          type: integer
+          example: 3
+        correct:
+          type: string
+          enum: [A, B, C, D]
+          example: B
+        counts:
+          type: object
+          properties:
+            A: { type: integer, example: 2 }
+            B: { type: integer, example: 11 }
+            C: { type: integer, example: 1 }
+            D: { type: integer, example: 0 }
+      example:
+        question_id: 3
+        correct: B
+        counts: { A: 2, B: 11, C: 1, D: 0 }
+
+    ScoresPayload:
+      type: object
+      required: [scores]
+      properties:
+        scores:
+          type: array
+          items:
+            type: object
+            required: [device_id, name, score]
+            properties:
+              device_id: { type: string, example: "aAlec-3a2f1c" }
+              name:      { type: string, example: "Max" }
+              score:     { type: integer, example: 1850 }
+      example:
+        scores:
+          - device_id: aAlec-3a2f1c
+            name: Max
+            score: 1850
+          - device_id: aAlec-07b4e9
+            name: Lisa
+            score: 1600
+
+    AnswerPayload:
+      type: object
+      required: [question_id, answer, elapsed_ms]
+      properties:
+        question_id:
+          type: integer
+          example: 3
+        answer:
+          type: string
+          enum: [A, B, C, D]
+          example: B
+        elapsed_ms:
+          type: integer
+          description: Milliseconds since the question was displayed
+          example: 4200
+      example:
+        question_id: 3
+        answer: B
+        elapsed_ms: 4200
+
+    ConnectPayload:
+      type: object
+      required: [device_id, name]
+      properties:
+        device_id:
+          type: string
+          example: "aAlec-3a2f1c"
+        name:
+          type: string
+          example: "aAlec-3a2f1c"
+      example:
+        device_id: aAlec-3a2f1c
+        name: aAlec-3a2f1c

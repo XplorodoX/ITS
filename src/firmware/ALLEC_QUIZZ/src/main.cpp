@@ -12,10 +12,13 @@
  *   GPIO 14 – Rotary encoder channel B
  *   GPIO 15 – Speaker (PWM tone)
  *
- * MQTT topics:
- *   aalec/quiz/question   – incoming question payload (JSON)
- *   aalec/quiz/answer     – outgoing answer from this device
- *   aalec/quiz/result     – incoming result for this device
+ * MQTT topics (canonical, matches game_master.py):
+ *   quiz/question          – incoming question payload (JSON)
+ *   quiz/state             – game state transitions
+ *   quiz/reveal            – correct answer + counts
+ *   quiz/answer/<chip_id>  – outgoing answer from this device
+ *   quiz/connect/<chip_id> – registration on boot
+ *   quiz/disconnect/<chip_id> – LWT (Last Will and Testament)
  */
 
 #include <Arduino.h>
@@ -49,9 +52,10 @@
 #define OLED_ADDR     0x3C
 
 // ─── MQTT topics ──────────────────────────────────────────────────────────────
-#define TOPIC_QUESTION  "aalec/quiz/question"
-#define TOPIC_ANSWER    "aalec/quiz/answer"
-#define TOPIC_RESULT    "aalec/quiz/result"
+#define TOPIC_QUESTION  "quiz/question"
+#define TOPIC_STATE     "quiz/state"
+#define TOPIC_REVEAL    "quiz/reveal"
+// answer / connect / disconnect are built dynamically with the chip ID
 
 // ─── Objects ─────────────────────────────────────────────────────────────────
 Adafruit_NeoPixel leds(NUM_LEDS, PIN_LED_DATA, NEO_GRB + NEO_KHZ800);
@@ -65,9 +69,16 @@ QuizState state = QuizState::IDLE;
 
 String questionText = "";
 String answers[4]   = {"", "", "", ""};
+String answerKeys[4] = {"A", "B", "C", "D"};  // option labels
 int    numAnswers    = 0;
 int    selectedIdx   = 0;
 bool   answered      = false;
+int    currentQuestionId = 0;
+
+// Device topics (set in setup after chip ID is known)
+String TOPIC_ANSWER_PUB;
+String TOPIC_CONNECT_PUB;
+String TOPIC_DISCONNECT_LWT;
 
 // Rotary encoder state
 volatile int  encPos      = 0;
@@ -175,32 +186,43 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
 
     if (String(topic) == TOPIC_QUESTION) {
-        // Expected JSON: {"q":"Question?","a0":"Opt A","a1":"Opt B","a2":"Opt C","a3":"Opt D"}
-        questionText = jsonGet(msg, "q");
-        numAnswers   = 0;
+        // {"id":3,"text":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"time_limit_s":20}
+        currentQuestionId = jsonGet(msg, "id").toInt();
+        questionText      = jsonGet(msg, "text");
+        numAnswers        = 0;
         for (int i = 0; i < 4; i++) {
-            String a = jsonGet(msg, "a" + String(i));
-            if (a.length() > 0) answers[numAnswers++] = a;
+            String key = answerKeys[i];
+            // options are nested: extract raw options block, then each key
+            int optStart = msg.indexOf("\"options\":");
+            if (optStart < 0) break;
+            String optBlock = msg.substring(optStart);
+            String search   = "\"" + key + "\":\"";
+            int start = optBlock.indexOf(search);
+            if (start < 0) break;
+            start += search.length();
+            int end = optBlock.indexOf("\"", start);
+            if (end < 0) break;
+            answers[numAnswers++] = optBlock.substring(start, end);
         }
         selectedIdx = 0;
         answered    = false;
         state       = QuizState::QUESTION;
         beepSelect();
         ledsIdle();
+        drawQuestion();
     }
 
-    if (String(topic) == TOPIC_RESULT) {
-        // Expected JSON: {"correct":"true"} or {"correct":"false"}
-        bool correct = (jsonGet(msg, "correct") == "true");
+    if (String(topic) == TOPIC_REVEAL) {
+        // {"question_id":3,"correct":"B","counts":{"A":2,"B":11,"C":1,"D":0}}
+        String correctKey = jsonGet(msg, "correct");
+        bool correct = false;
+        if (answered) {
+            correct = (correctKey == answerKeys[selectedIdx]);
+        }
         state = QuizState::RESULT;
         drawResult(correct);
-        if (correct) {
-            beepCorrect();
-            ledsCorrect();
-        } else {
-            beepWrong();
-            ledsWrong();
-        }
+        if (correct) { beepCorrect(); ledsCorrect(); }
+        else          { beepWrong();  ledsWrong();  }
         delay(3000);
         state = QuizState::IDLE;
         ledsIdle();
@@ -240,10 +262,22 @@ void connectMQTT() {
     mqtt.setServer(MQTT_HOST, MQTT_PORT);
     mqtt.setCallback(mqttCallback);
 
-    String clientId = "aalec-" + String(ESP.getChipId(), HEX);
-    if (mqtt.connect(clientId.c_str())) {
+    String chipId  = String(ESP.getChipId(), HEX);
+    String clientId = "aAlec-" + chipId;
+    TOPIC_ANSWER_PUB     = "quiz/answer/"     + clientId;
+    TOPIC_CONNECT_PUB    = "quiz/connect/"    + clientId;
+    TOPIC_DISCONNECT_LWT = "quiz/disconnect/" + clientId;
+
+    if (mqtt.connect(clientId.c_str(),
+                     nullptr, nullptr,                    // no auth
+                     TOPIC_DISCONNECT_LWT.c_str(), 0, false, "")) {
         mqtt.subscribe(TOPIC_QUESTION);
-        mqtt.subscribe(TOPIC_RESULT);
+        mqtt.subscribe(TOPIC_STATE);
+        mqtt.subscribe(TOPIC_REVEAL);
+
+        // Register device
+        String reg = "{\"device_id\":\"" + clientId + "\",\"name\":\"" + clientId + "\"}";
+        mqtt.publish(TOPIC_CONNECT_PUB.c_str(), reg.c_str());
     }
 }
 
@@ -319,10 +353,12 @@ void loop() {
                 answered = true;
                 state    = QuizState::ANSWERED;
 
-                // Build answer payload: {"a":"<selected answer text>","i":<index>}
-                String payload = "{\"a\":\"" + answers[selectedIdx]
-                                 + "\",\"i\":" + String(selectedIdx) + "}";
-                mqtt.publish(TOPIC_ANSWER, payload.c_str());
+                // Build answer payload per protocol: {"question_id":N,"answer":"B","elapsed_ms":N}
+                unsigned long elapsedMs = (unsigned long)((millis()));
+                String payload = "{\"question_id\":" + String(currentQuestionId)
+                                 + ",\"answer\":\"" + answerKeys[selectedIdx]
+                                 + "\",\"elapsed_ms\":" + String(elapsedMs) + "}";
+                mqtt.publish(TOPIC_ANSWER_PUB.c_str(), payload.c_str());
 
                 // Visual feedback while waiting for result
                 ledsColor(leds.Color(100, 100, 0));

@@ -1,0 +1,20 @@
+[
+  {
+    "text": "Was ist die Hauptstadt von Frankreich?",
+    "options": { "A": "Berlin", "B": "Paris", "C": "Madrid", "D": "Rom" },
+    "correct": "B",
+    "time_limit_s": 20
+  },
+  {
+    "text": "Welches Protokoll nutzt AALeC zur Kommunikation?",
+    "options": { "A": "HTTP", "B": "CoAP", "C": "MQTT", "D": "WebRTC" },
+    "correct": "C",
+    "time_limit_s": 20
+  },
+  {
+    "text": "Auf welchem Mikrocontroller basiert das AALeC V3?",
+    "options": { "A": "Arduino Nano", "B": "ESP32", "C": "Raspberry Pi Pico", "D": "ESP8266 (Wemos D1 Mini)" },
+    "correct": "D",
+    "time_limit_s": 20
+  }
+]

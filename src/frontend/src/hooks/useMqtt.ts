@@ -1,0 +1,55 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import mqtt, { MqttClient } from "mqtt";
+import type { GameState, Question, Reveal, Scores } from "@/types/quiz";
+
+export interface QuizData {
+  gameState: GameState | null;
+  question: Question | null;
+  reveal: Reveal | null;
+  scores: Scores | null;
+  connected: boolean;
+}
+
+const BROKER_WS_URL =
+  process.env.NEXT_PUBLIC_MQTT_URL ?? "ws://localhost:9001";
+
+export function useMqtt(): QuizData {
+  const clientRef = useRef<MqttClient | null>(null);
+
+  const [connected, setConnected]   = useState(false);
+  const [gameState, setGameState]   = useState<GameState | null>(null);
+  const [question,  setQuestion]    = useState<Question | null>(null);
+  const [reveal,    setReveal]       = useState<Reveal | null>(null);
+  const [scores,    setScores]       = useState<Scores | null>(null);
+
+  useEffect(() => {
+    const client = mqtt.connect(BROKER_WS_URL);
+    clientRef.current = client;
+
+    client.on("connect", () => {
+      setConnected(true);
+      client.subscribe(["quiz/state", "quiz/question", "quiz/reveal", "quiz/scores"]);
+    });
+
+    client.on("disconnect", () => setConnected(false));
+    client.on("error", () => setConnected(false));
+
+    client.on("message", (topic: string, payload: Buffer) => {
+      try {
+        const data = JSON.parse(payload.toString());
+        if (topic === "quiz/state")    setGameState(data);
+        if (topic === "quiz/question") setQuestion(data);
+        if (topic === "quiz/reveal")   setReveal(data);
+        if (topic === "quiz/scores")   setScores(data);
+      } catch {
+        // malformed message — ignore
+      }
+    });
+
+    return () => { client.end(); };
+  }, []);
+
+  return { connected, gameState, question, reveal, scores };
+}

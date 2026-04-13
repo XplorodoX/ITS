@@ -1,0 +1,42 @@
+"use client";
+
+import type { ScoreEntry } from "@/types/quiz";
+import styles from "./screens.module.css";
+
+const MEDALS = ["🥇", "🥈", "🥉"];
+
+interface Props {
+  scores: ScoreEntry[];
+  ended?: boolean;
+}
+
+export default function ScoresScreen({ scores, ended = false }: Props) {
+  const maxScore = scores[0]?.score || 1;
+
+  return (
+    <div className={styles.screen}>
+      <h2 className={styles.scoresTitle}>{ended ? "Endergebnis" : "Zwischenstand"}</h2>
+
+      <div className={styles.scoresList}>
+        {scores.map((entry, i) => (
+          <div
+            key={entry.device_id}
+            className={`${styles.scoreRow} ${i === 0 ? styles.scoreRowFirst : ""}`}
+          >
+            <span className={styles.scoreRank}>
+              {i < 3 ? MEDALS[i] : `${i + 1}.`}
+            </span>
+            <span className={styles.scoreName}>{entry.name}</span>
+            <div className={styles.scoreBarTrack}>
+              <div
+                className={styles.scoreBarFill}
+                style={{ width: `${(entry.score / maxScore) * 100}%` }}
+              />
+            </div>
+            <span className={styles.scorePoints}>{entry.score.toLocaleString("de-DE")}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

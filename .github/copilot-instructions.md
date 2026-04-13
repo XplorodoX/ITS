@@ -1,229 +1,372 @@
-# Copilot Instructions for the Locust Teaching Repository
+# Copilot Instructions — AALeC Multiplayer Quiz
 
-This is a **teaching copy** of [locustio/locust](https://github.com/locustio/locust),
-used in "AI-Supported Software Development" at Hochschule Aalen. GitHub Actions
-are disabled. Branch protection is on `master` (1 review required).
+This repository contains the software for an **MQTT-based multiplayer quiz
+system** built around the **AALeC** (Aalener Lern-Computer) hardware platform,
+developed at Hochschule Aalen.
 
-## Collaboration Principles
+---
 
-- Be direct and technically accurate. If something is wrong or could be better, say so constructively.
-- Understand existing code before proposing changes. Locust has intentional design decisions — look at how similar things are already done before suggesting a different approach.
-- Keep changes minimal. One logical change per commit, one purpose per PR. No drive-by refactors.
-- Follow the workflow: research the relevant modules/tests, plan the approach, implement focused changes, then validate with `make test` and `uv run ruff check . && uv run ruff format --check`.
+## System Overview
 
-## Project Overview
-
-Locust is a **load/performance testing framework**. Users define virtual user
-behavior in Python classes, and Locust spawns thousands of concurrent gevent
-greenlets to simulate traffic. It has a real-time web UI (Flask + React) and
-supports distributed execution via ZeroMQ.
-
-### Architecture
+Students participate in a live quiz using their AALeC devices. A central server
+manages the game state, sends questions to all clients, collects answers, and
+calculates scores. A beamer view (browser-based) displays the question and live
+results to the room.
 
 ```
-main.py → Environment → Runner → Users (greenlets)
-               │             │           │
-               │             │           ├── @task methods
-               │             │           └── HttpSession / FastHttpSession
-               │             ├── UsersDispatcher (allocates users to workers)
-               │             └── stats.RequestStats (collects metrics)
-               ├── Events (pub/sub: request, test_start, test_stop, ...)
-               ├── WebUI (Flask REST API + React frontend on :8089)
-               └── LoadTestShape (optional programmatic load curves)
+                        MQTT Broker
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+   Game Master         AALeC #1 … #N      Beamer View
+  (Python backend)    (ESP8266 firmware)  (Browser / HTML)
+          │                 │                 │
+   publishes questions   shows A/B/C/D    shows question +
+   collects answers      on OLED display    live bar chart
+   calculates scores     rotary = select    after reveal
 ```
 
-**Data flow:** `@task` calls `self.client.get(url)` → `HttpSession` measures
-response time → fires `environment.events.request` → `RequestStats` logs it →
-web UI polls `/api/stats`.
+---
 
-**Runner hierarchy:** `Runner` (abstract) → `LocalRunner` (single process) /
-`MasterRunner` + `WorkerRunner` (distributed via ZMQ).
+## Hardware: AALeC V3
 
-### Key Modules
+Each AALeC is a **Wemos D1 Mini** (ESP8266) with:
 
-- `locust/__init__.py` — Public API exports + gevent monkey-patching (must run before stdlib imports)
-- `locust/user/users.py` — `User`, `HttpUser` base classes. Lifecycle: `on_start()` → task loop → `on_stop()`
-- `locust/user/task.py` — `@task`, `@tag` decorators, `TaskSet`. Core execution loop: pick task → execute → wait → repeat
-- `locust/event.py` — `EventHook` pub/sub system. Key events: `init`, `test_start`, `test_stop`, `request`, `spawning_complete`, `quitting`
-- `locust/env.py` — `Environment` class. Central object holding user classes, runner, web UI, stats, events
-- `locust/runners.py` — `LocalRunner`, `MasterRunner`/`WorkerRunner`. Controls spawning, stats, shape worker
-- `locust/stats.py` — `RequestStats`, `StatsEntry`. Per-request metrics with histogram bucketing and percentiles
-- `locust/web.py` — Flask web UI. REST endpoints: `/api/stats`, `/api/start`, `/api/stop`, etc.
-- `locust/clients.py` — `HttpSession` (extends `requests.Session`). Wraps HTTP calls with timing + `request` event
-- `locust/main.py` — CLI entry point. Parses args, loads locustfiles, creates Environment, starts runner + web UI
-- `locust/dispatch.py` — User-to-worker distribution using Kullback-Leibler divergence
-- `locust/shape.py` — `LoadTestShape` base class for custom load profiles
-- `locust/argument_parser.py` — CLI argument definitions
-- `locust/exception.py` — `StopUser`, `InterruptTaskSet`, `RescheduleTask`, `StopTest`
+| Component | Purpose in quiz |
+|-----------|-----------------|
+| OLED display (SSD1306, I²C) | Shows A / B / C / D answer options |
+| Rotary encoder + push button | Navigate and confirm answer selection |
+| 5× WS2812B LEDs | Visual feedback (correct = green, wrong = red) |
+| BME280/BME680 sensor | Not used in quiz mode |
+| WiFi (ESP8266 built-in) | MQTT over TCP/IP |
 
-### Key Directories
+**GPIO mapping relevant for quiz firmware:**
 
-- `locust/user/` — User model, task system, wait times, sequential/markov tasksets
-- `locust/contrib/` — Protocol-specific users: `fasthttp.py`, `mqtt.py`, `socketio.py`, `postgres.py`, `mongodb.py`
-- `locust/rpc/` — ZeroMQ master-worker communication (msgpack serialization)
-- `locust/webui/` — React + TypeScript frontend (Vite, Yarn)
-- `locust/test/` — All tests (~700+ methods, 28 files). Each test file matches a source module.
-- `examples/` — 40+ example locustfiles
-- `docs/` — Sphinx/RST documentation
+| GPIO | Function |
+|------|----------|
+| 0 | Rotary encoder button (confirm answer) |
+| 2 | WS2812B LED chain |
+| 4 | SDA (OLED) |
+| 5 | SCL (OLED) |
+| 12 | Rotary encoder channel A |
+| 14 | Rotary encoder channel B |
+
+**Library dependencies (Arduino):**
+- `Adafruit_NeoPixel` — LED chain
+- `ESP8266 and ESP32 OLED Driver for SSD1306 display` — OLED
+- `PubSubClient` — MQTT client
+- `ArduinoJson` — JSON message parsing
+
+---
+
+## MQTT Topic Structure
+
+All topics are prefixed with `quiz/`.
+
+### Server → Clients (publish)
+
+| Topic | Payload | Description |
+|-------|---------|-------------|
+| `quiz/state` | JSON | Current game state (see below) |
+| `quiz/question` | JSON | Active question with answer options |
+| `quiz/reveal` | JSON | Correct answer + per-option counts |
+| `quiz/scores` | JSON | Current scoreboard |
+
+### Clients → Server (publish)
+
+| Topic | Payload | Description |
+|-------|---------|-------------|
+| `quiz/answer/<device_id>` | JSON | Player's answer submission |
+| `quiz/connect/<device_id>` | JSON | Device registration on startup |
+| `quiz/disconnect/<device_id>` | — | LWT (Last Will and Testament) topic |
+
+### Beamer (subscribe-only)
+
+The beamer view subscribes to `quiz/state`, `quiz/question`, `quiz/reveal`, and
+`quiz/scores`. It never publishes.
+
+---
+
+## Message Formats
+
+### `quiz/question`
+```json
+{
+  "id": 3,
+  "text": "Was ist die Hauptstadt von Frankreich?",
+  "options": {
+    "A": "Berlin",
+    "B": "Paris",
+    "C": "Madrid",
+    "D": "Rom"
+  },
+  "time_limit_s": 20
+}
+```
+
+### `quiz/answer/<device_id>`
+```json
+{
+  "question_id": 3,
+  "answer": "B",
+  "elapsed_ms": 4200
+}
+```
+
+### `quiz/state`
+```json
+{
+  "state": "VOTING",
+  "question_id": 3,
+  "remaining_s": 14
+}
+```
+Valid states: `WAITING` | `QUESTION` | `VOTING` | `REVEAL` | `SCORES` | `ENDED`
+
+### `quiz/reveal`
+```json
+{
+  "question_id": 3,
+  "correct": "B",
+  "counts": { "A": 2, "B": 11, "C": 1, "D": 0 }
+}
+```
+
+### `quiz/scores`
+```json
+{
+  "scores": [
+    { "device_id": "aAlec-42", "name": "Max", "score": 1850 },
+    { "device_id": "aAlec-07", "name": "Lisa", "score": 1600 }
+  ]
+}
+```
+
+---
+
+## Game Master (Python Backend)
+
+The server is a Python application responsible for the full game loop.
+
+### State machine
+
+```
+WAITING ──► QUESTION ──► VOTING ──► REVEAL ──► SCORES
+               ▲                                  │
+               └──────────── (next question) ◄────┘
+                                                  │ (last question)
+                                               ENDED
+```
+
+### Scoring
+
+- Base score per correct answer: **1000 points**
+- Time bonus: linear, up to **+500 points** for instant answer
+  - `bonus = round(500 * (1 - elapsed_ms / (time_limit_s * 1000)))`
+- No points for wrong answers or late submissions (after `REVEAL`)
+
+### Device lifecycle
+
+- On connect: device publishes to `quiz/connect/<id>` with `{"name": "...", "device_id": "..."}`
+- LWT: device registers `quiz/disconnect/<id>` with the broker on connect
+- Server tracks connected devices and excludes disconnected ones from scoring
+
+### Key responsibilities
+
+- Load question set from JSON file
+- Maintain game state and publish `quiz/state` on every transition
+- Accept registrations during `WAITING` state only
+- Open answer window during `VOTING`, reject late answers
+- Compute scores, publish `quiz/reveal` and `quiz/scores`
+- Advance game loop (timed transitions via `asyncio` or threading)
+
+---
+
+## AALeC Firmware Behavior
+
+### Display layout (OLED 128×64)
+
+```
+┌──────────────────────────────┐
+│  Frage 3 / 10      [14s]     │  ← question number + timer
+├──────────────────────────────┤
+│  > A  Berlin                 │  ← answer options, rotary selects
+│    B  Paris                  │
+│    C  Madrid                 │
+│    D  Rom                    │
+└──────────────────────────────┘
+```
+
+After submission the display shows `Antwort: B` and locks input until `REVEAL`.
+
+### LED feedback
+
+| Event | LED pattern |
+|-------|-------------|
+| Connected, waiting | Slow blue pulse |
+| Question active | White, dim |
+| Answer submitted | Cyan, solid |
+| Correct answer revealed | Green, bright |
+| Wrong answer revealed | Red, brief flash → off |
+| Disconnected / error | Red, solid |
+
+### Rotary encoder
+
+- Rotate: cycle through A / B / C / D
+- Push: confirm selection (only valid during `VOTING` state)
+- Double-push during `WAITING`: register device name (if name entry is implemented)
+
+---
+
+## Beamer View
+
+A single-page HTML/JS app served by the game master (or opened as a local file).
+Subscribes to MQTT via WebSocket (e.g. using `mqtt.js` against the broker's WS
+port).
+
+### Screens
+
+| State | What is shown |
+|-------|---------------|
+| `WAITING` | Connected player list, waiting message |
+| `QUESTION` | Question text, countdown timer |
+| `VOTING` | Question text + animated countdown, answer count (no options revealed) |
+| `REVEAL` | Bar chart of answer distribution, correct answer highlighted |
+| `SCORES` | Scoreboard (top N players) |
+| `ENDED` | Final scoreboard, winner highlight |
+
+---
+
+## Project Structure
+
+```
+AALeC-Quiz/
+├── server/
+│   ├── game_master.py      # Main loop, state machine
+│   ├── mqtt_client.py      # MQTT publish/subscribe helpers
+│   ├── scoring.py          # Score calculation
+│   ├── questions.json      # Question bank
+│   ├── pyproject.toml      # uv project definition + dependencies
+│   └── uv.lock             # Locked dependency tree (commit this)
+├── firmware/
+│   ├── aAlec_quiz/
+│   │   ├── aAlec_quiz.ino  # Arduino sketch (main)
+│   │   ├── config.h        # WiFi credentials + broker IP (do not commit)
+│   │   ├── display.h/.cpp  # OLED rendering
+│   │   ├── leds.h/.cpp     # WS2812B feedback
+│   │   └── mqtt.h/.cpp     # MQTT connection + message handling
+│   └── lib/                # Local library copies if needed
+├── beamer/
+│   └── index.html          # Single-page beamer view (self-contained)
+├── mosquitto.conf          # Broker config (TCP 1883 + WS 9001)
+├── docs/
+│   └── mqtt-topics.md      # Extended topic documentation
+└── README.md
+```
+
+---
+
+## Development Setup
+
+### Broker
+
+Any MQTT broker works. For local development use the included config:
+```bash
+docker run -d -p 1883:1883 -p 9001:9001 \
+  -v $(pwd)/mosquitto.conf:/mosquitto/config/mosquitto.conf \
+  eclipse-mosquitto
+```
+`mosquitto.conf` enables TCP on 1883 **and** WebSockets on 9001 (required by the
+beamer). Minimal config:
+```
+listener 1883
+listener 9001
+protocol websockets
+allow_anonymous true
+```
+
+### Python server
+
+Uses [uv](https://docs.astral.sh/uv/) for dependency management — same tooling
+as in the Locust teaching repo.
+
+```bash
+cd server
+uv sync                          # install deps from uv.lock
+uv run game_master.py --broker localhost --questions questions.json
+```
+
+To add a dependency:
+```bash
+uv add paho-mqtt
+```
+
+Never edit `uv.lock` by hand and always commit it alongside `pyproject.toml`.
+
+### Firmware
+
+Open `firmware/aAlec_quiz/aAlec_quiz.ino` in the Arduino IDE. Copy
+`config.h.example` to `config.h` and fill in your WiFi credentials and broker
+IP before flashing. `config.h` is gitignored.
+
+### Beamer
+
+`beamer/index.html` is self-contained — no build step, no separate JS file.
+Open it directly in a browser (full-screen on the beamer):
+```bash
+xdg-open beamer/index.html      # Linux
+open beamer/index.html          # macOS
+```
+The broker WebSocket URL is configured at the top of the `<script>` block
+(default: `ws://localhost:9001`). Change it to match your broker IP before
+the session.
+
+---
 
 ## Coding Conventions
 
-- **Line length**: 120 characters
-- **Formatter/linter**: Ruff (handles both). Run `uv run ruff check . && uv run ruff format --check`
-- **Import order**: `locust` imports MUST come first (before stdlib) because `__init__.py` does gevent monkey-patching. Ruff isort is configured for this.
-- **Type checking**: mypy, `python_version = "3.10"`, `ignore_missing_imports = true`
-- **Tests**: pytest with `unittest.TestCase` style. Extend `LocustTestCase` or `WebserverTestCase` from `locust/test/testcases.py`. No conftest.py — tests use base classes for setup/teardown.
-- **Gevent awareness**: All I/O is cooperative (greenlets). Use `gevent.sleep()`. CPU-bound code blocks all greenlets.
+- **Python**: PEP 8, type hints where practical, `paho-mqtt>=2.0` for broker communication
+- **Package management**: `uv` — use `uv add <pkg>` (never `pip install`), always commit `uv.lock`
+- **Arduino/C++**: Follow AALeC library style; use the AALeC library for display and LEDs
+- **Beamer**: `beamer/index.html` is a single self-contained file — no bundler, no separate JS. Keep it that way.
+- **JSON messages**: always include `question_id` to allow late-message detection
+- **Device IDs**: use the ESP8266 chip ID, formatted as `aAlec-<hex>` (6 digits)
+- **State transitions**: only the game master changes state; clients are always receivers of state
+- **`config.h` is gitignored** — never commit WiFi credentials or broker IPs
 
-## Common Patterns
-
-**User definition:**
-```python
-from locust import HttpUser, task, between
-
-class MyUser(HttpUser):
-    wait_time = between(1, 3)
-    @task(3)
-    def browse(self):
-        self.client.get("/items")
-```
-
-**Event hooks:**
-```python
-@events.init.add_listener
-def on_init(environment, **kwargs):
-    pass
-```
-
-**Response validation with `catch_response`:**
-```python
-with self.client.get("/api/data", catch_response=True) as response:
-    if response.json().get("status") != "ok":
-        response.failure("Bad status")
-```
-
-**Control flow exceptions:** `StopUser` (stop user), `InterruptTaskSet` (return to parent), `RescheduleTask` (skip wait), `StopTest` (abort test).
-
-**Wait times:** `between(min, max)`, `constant(sec)`, `constant_pacing(sec)`, `constant_throughput(rate)`.
-
-**Metaclass task collection:** `UserMeta`/`TaskSetMeta` scan for `@task`-decorated methods and build the `tasks` list automatically from `locust_task_weight` attributes.
-
-## Testing
-
-- Run all tests: `make test` or `pytest -vv locust/test`
-- Single file: `pytest locust/test/test_stats.py`
-- Single method: `pytest locust/test/test_stats.py::TestClass::test_method`
-- No CI in this repo — run tests locally before pushing
-- Never fix a test by changing a correct assertion — fix the code instead
-- When multiple tests fail, focus on the first one (later failures often cascade)
-
-**Writing a test:**
-```python
-from locust import User, task, constant
-from locust.test.testcases import LocustTestCase
-
-class TestMyFeature(LocustTestCase):
-    def test_something(self):
-        class MyUser(User):
-            wait_time = constant(0)
-            @task
-            def my_task(self):
-                pass
-        user = MyUser(self.environment)
-        # ... assertions
-```
-
-**Test utilities** in `locust/test/util.py`: `temporary_file()`, `patch_env()`, `get_free_tcp_port()`, `mock_locustfile()`.
-
-## Benchmarks
-
-Run `make benchmark` (or `uv run python benchmarks/run_benchmarks.py`) to measure
-ops/sec for refactoring exercise targets. Students must include before/after
-numbers in refactoring PRs.
-
-| Benchmark | Package | What it measures |
-| --------- | ------- | ---------------- |
-| `setup_logging()` | A (Utilities) | Logging config dict construction |
-| `StatsEntry.log()` | B (Statistics) | Per-request stats recording (hot path) |
-| `StatsEntry.extend()` | B (Statistics) | Stats entry merging |
-| `filter_tasks_by_tags()` | C (User Model) | Task filtering by tag sets |
-
-## Git Workflow
-
-1. Branch from `master`: `git checkout -b feature/<short-description>` (or `fix/`, `refactor/`)
-2. Make focused, atomic commits. Imperative mood ("Add retry logic", not "Added").
-3. Validate: `make test && uv run ruff check . && uv run ruff format --check`
-4. Push and open a PR against `master`. PR title under 70 chars, imperative. Description explains *what* and *why*.
-5. Get 1 review (required by branch protection). No force pushes.
-
-## Do NOT Modify
-
-- `.github/workflows/` — Actions are disabled; edits have no effect
-- `locust/webui/dist/` — Built artifacts, regenerated by `yarn webui:build`
-- `locust/_version.py` — Auto-generated by hatch-vcs
-- `Dockerfile*`, Makefile release targets — Not relevant for course work
+---
 
 ## AI Diary
 
-Every AI-assisted contribution to this repository is documented in an **AI
-Diary** — a transparent log of prompts and the artifacts they produced. The
-goal is traceability: reviewers, instructors, and future contributors can see
-exactly what was asked, what was generated, and how many iterations it took.
-
-### Why
-
-In a course about AI-supported software development, making AI usage visible
-matters. The diary ensures that AI contributions are traceable in the git
-history, supports honest reflection on how AI tools are used, and helps the
-team learn from each other's prompting strategies.
-
-### Where entries live
-
-```text
-diary/<branch-name>/NNN-short-title.md
-```
-
-Each feature branch gets its own subfolder under `diary/`. Inside, entries are
-numbered markdown files (e.g., `001-add-retry-logic.md`).
-
-### Entry template
+Every AI-assisted contribution is documented in `diary/<branch>/NNN-title.md`.
 
 ```markdown
 # NNN — Short Title
 
 **Date**: YYYY-MM-DD
-**Tool**: [tool name, e.g., Claude Code, GitHub Copilot, Cursor]
-**Model**: [model name, e.g., Claude Opus 4.6, GPT-4.1]
-**Iterations**: [number of follow-up prompts needed]
+**Tool**: [Claude / Copilot / Cursor / ...]
+**Model**: [model name]
+**Iterations**: [number of follow-up prompts]
 
 ## Prompt
 
 **YYYY-MM-DD HH:MM**
 
-[The full prompt text as given by the user.]
-
-If there were follow-up prompts, add each with its own timestamp:
-
-**YYYY-MM-DD HH:MM**
-
-[Follow-up prompt text.]
+[Full prompt text.]
 ```
 
-### Commit convention
-
-Every prompt that creates or modifies code artifacts results in its own commit
-containing both the code changes and the corresponding diary entry:
-
-```text
+Commit convention:
+```
 [diary] NNN — Short description of what was prompted
 ```
 
-This way, `git log` shows a clear trail of AI interactions, and
-`git show <hash>` reveals both what was produced and what was asked.
-
-### Rule
-
 Every AI-assisted code change **must** have a corresponding diary entry
-committed alongside it. No exceptions — this is how we keep AI usage
-transparent in this teaching repository.
+committed alongside it.
 
+---
+
+## Do NOT Modify
+
+- `lib/` inside `firmware/` — vendored Arduino library copies
+- `uv.lock` by hand — always go through `uv add` / `uv remove`
+- `config.h` — local secrets, gitignored, each developer has their own

@@ -1,5 +1,16 @@
 # Copilot Instructions — AALeC Multiplayer Quiz
 
+## Repository Status (Current Phase)
+
+As of **2026-04-13**, this repository is in a **bootstrap/preparation phase**.
+
+- Focus currently on repository structure, process documentation, and DevOps
+  readiness.
+- Do **not** implement production backend, firmware, or frontend logic unless the
+  prompt explicitly requests coding those components.
+- Prefer placeholders, scaffolding, CI quality gates, and architecture docs.
+- Canonical source layout is `src/backend`, `src/frontend`, and `src/firmware`.
+
 This repository contains the software for an **MQTT-based multiplayer quiz
 system** built around the **AALeC** (Aalener Lern-Computer) hardware platform,
 developed at Hochschule Aalen.
@@ -218,11 +229,11 @@ After submission the display shows `Antwort: B` and locks input until `REVEAL`.
 
 ---
 
-## Beamer View
+## Frontend View
 
-A single-page HTML/JS app served by the game master (or opened as a local file).
-Subscribes to MQTT via WebSocket (e.g. using `mqtt.js` against the broker's WS
-port).
+A Node.js-based frontend (Next.js) for projector/beamer usage.
+Consumes MQTT state via a suitable bridge/client strategy for browser contexts
+(for example via broker WebSocket support).
 
 ### Screens
 
@@ -241,38 +252,46 @@ port).
 
 ```
 AALeC-Quiz/
-├── server/
-│   ├── game_master.py      # Main loop, state machine
-│   ├── mqtt_client.py      # MQTT publish/subscribe helpers
-│   ├── scoring.py          # Score calculation
-│   ├── questions.json      # Question bank
-│   ├── pyproject.toml      # uv project definition + dependencies
-│   └── uv.lock             # Locked dependency tree (commit this)
-├── firmware/
-│   ├── aAlec_quiz/
-│   │   ├── aAlec_quiz.ino  # Arduino sketch (main)
-│   │   ├── config.h        # WiFi credentials + broker IP (do not commit)
-│   │   ├── display.h/.cpp  # OLED rendering
-│   │   ├── leds.h/.cpp     # WS2812B feedback
-│   │   └── mqtt.h/.cpp     # MQTT connection + message handling
-│   └── lib/                # Local library copies if needed
-├── beamer/
-│   └── index.html          # Single-page beamer view (self-contained)
-├── mosquitto.conf          # Broker config (TCP 1883 + WS 9001)
+├── .github/
+│   ├── workflows/           # CI workflows (bootstrap checks first)
+│   └── copilot-instructions.md
+├── diary/
+│   ├── README.md
+│   └── <branch>/NNN-title.md
+├── src/
+│   ├── backend/
+│   │   └── README.md        # Placeholder during bootstrap
+│   ├── firmware/
+│   │   ├── aAlec_quiz/
+│   │   │   └── README.md    # Placeholder during bootstrap
+│   │   └── lib/             # Local library copies if needed
+│   └── frontend/
+│       └── README.md        # Placeholder during bootstrap (Node/Next.js)
 ├── docs/
-│   └── mqtt-topics.md      # Extended topic documentation
+│   └── devops/
+│       ├── README.md
+│       └── ci-cd-plan.md
+├── docs/mqtt-topics.md      # Extended topic documentation
+├── mosquitto.conf           # Broker config (optional in later phase)
+├── LICENSE
 └── README.md
 ```
+
+Planned implementation files listed in this document remain targets for later
+phases and may not exist yet.
 
 ---
 
 ## Development Setup
 
+In bootstrap phase, prefer setting up CI pipelines and repository standards
+before introducing runtime components.
+
 ### Broker
 
 Any MQTT broker works. For local development use the included config:
 ```bash
-docker run -d -p 1883:1883 -p 9001:9001 \
+podman run -d -p 1883:1883 -p 9001:9001 \
   -v $(pwd)/mosquitto.conf:/mosquitto/config/mosquitto.conf \
   eclipse-mosquitto
 ```
@@ -285,13 +304,12 @@ protocol websockets
 allow_anonymous true
 ```
 
-### Python server
+### Backend (Python)
 
-Uses [uv](https://docs.astral.sh/uv/) for dependency management — same tooling
-as in the Locust teaching repo.
+Uses [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-cd server
+cd src/backend
 uv sync                          # install deps from uv.lock
 uv run game_master.py --broker localhost --questions questions.json
 ```
@@ -303,23 +321,27 @@ uv add paho-mqtt
 
 Never edit `uv.lock` by hand and always commit it alongside `pyproject.toml`.
 
+If `src/backend/pyproject.toml` does not yet exist, prepare only scaffolding and CI
+checks first.
+
 ### Firmware
 
-Open `firmware/aAlec_quiz/aAlec_quiz.ino` in the Arduino IDE. Copy
+Open `src/firmware/aAlec_quiz/aAlec_quiz.ino` in the Arduino IDE. Copy
 `config.h.example` to `config.h` and fill in your WiFi credentials and broker
 IP before flashing. `config.h` is gitignored.
 
-### Beamer
+### Frontend (Node/Next.js)
 
-`beamer/index.html` is self-contained — no build step, no separate JS file.
-Open it directly in a browser (full-screen on the beamer):
+Frontend implementation should live in `src/frontend` as a Next.js app.
+In bootstrap phase, keep it as scaffolding only. Once implemented, standard
+local development flow should be:
 ```bash
-xdg-open beamer/index.html      # Linux
-open beamer/index.html          # macOS
+cd src/frontend
+npm ci
+npm run dev
 ```
-The broker WebSocket URL is configured at the top of the `<script>` block
-(default: `ws://localhost:9001`). Change it to match your broker IP before
-the session.
+Keep broker configuration environment-based (for example via `.env.local`) and
+never commit secrets.
 
 ---
 
@@ -328,11 +350,25 @@ the session.
 - **Python**: PEP 8, type hints where practical, `paho-mqtt>=2.0` for broker communication
 - **Package management**: `uv` — use `uv add <pkg>` (never `pip install`), always commit `uv.lock`
 - **Arduino/C++**: Follow AALeC library style; use the AALeC library for display and LEDs
-- **Beamer**: `beamer/index.html` is a single self-contained file — no bundler, no separate JS. Keep it that way.
+- **Frontend**: use Node.js + Next.js in `src/frontend`; prefer TypeScript and
+  keep architecture modular.
 - **JSON messages**: always include `question_id` to allow late-message detection
 - **Device IDs**: use the ESP8266 chip ID, formatted as `aAlec-<hex>` (6 digits)
 - **State transitions**: only the game master changes state; clients are always receivers of state
 - **`config.h` is gitignored** — never commit WiFi credentials or broker IPs
+
+## DevOps Baseline (Bootstrap)
+
+- Keep `.github/workflows/tests.yml` passing at all times.
+- CI in current phase should validate repository quality gates, not product
+  runtime behavior.
+- Minimum expected checks:
+  - workflow linting (`actionlint`)
+  - markdown linting
+  - repository structure sanity checks for `src/backend`, `src/frontend`, and
+    `src/firmware`
+- Only add runtime test jobs (Python, Arduino, frontend) when the respective
+  code actually exists.
 
 ---
 
@@ -345,7 +381,7 @@ Every AI-assisted contribution is documented in `diary/<branch>/NNN-title.md`.
 
 **Date**: YYYY-MM-DD
 **Tool**: [Claude / Copilot / Cursor / ...]
-**Model**: [model name]
+**Model**: [model name, e.g., GPT-5.3-Codex]
 **Iterations**: [number of follow-up prompts]
 
 ## Prompt
@@ -367,6 +403,6 @@ committed alongside it.
 
 ## Do NOT Modify
 
-- `lib/` inside `firmware/` — vendored Arduino library copies
+- `lib/` inside `src/firmware/` — vendored Arduino library copies
 - `uv.lock` by hand — always go through `uv add` / `uv remove`
 - `config.h` — local secrets, gitignored, each developer has their own

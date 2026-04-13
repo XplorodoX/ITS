@@ -33,6 +33,7 @@ yarn-error.log
 src/firmware/**/build/
 src/firmware/**/.pio/
 src/firmware/**/config.h
+src/firmware/**/platformio.ini.local
 
 docs/_build/
 

@@ -26,7 +26,14 @@ export default function ScoresScreen({ scores, ended = false }: Props) {
             <span className={styles.scoreRank}>
               {i < 3 ? MEDALS[i] : `${i + 1}.`}
             </span>
-            <span className={styles.scoreName}>{entry.name}</span>
+            <span className={styles.scoreName}>
+              {entry.name}
+              {entry.streak != null && entry.streak >= 2 && (
+                <span className={styles.streakBadge} title={`${entry.streak}× Streak`}>
+                  {"🔥".repeat(Math.min(entry.streak, 3))}
+                </span>
+              )}
+            </span>
             <div className={styles.scoreBarTrack}>
               <div
                 className={styles.scoreBarFill}

@@ -22,17 +22,20 @@ from typing import Optional
 import paho.mqtt.client as mqtt
 
 # ── Topics ────────────────────────────────────────────────────────────────────
-T_STATE      = "quiz/state"
-T_QUESTION   = "quiz/question"
-T_REVEAL     = "quiz/reveal"
-T_SCORES     = "quiz/scores"
-T_ANSWER     = "quiz/answer/#"       # subscribe pattern
-T_CONNECT    = "quiz/connect/#"      # subscribe pattern
-T_DISCONNECT = "quiz/disconnect/#"   # subscribe pattern (LWT)
+T_STATE        = "quiz/state"
+T_QUESTION     = "quiz/question"
+T_REVEAL       = "quiz/reveal"
+T_SCORES       = "quiz/scores"
+T_ANSWER_COUNT = "quiz/answer_count"  # live counter for beamer
+T_ANSWER       = "quiz/answer/#"      # subscribe pattern
+T_CONNECT      = "quiz/connect/#"     # subscribe pattern
+T_DISCONNECT   = "quiz/disconnect/#"  # subscribe pattern (LWT)
 
 # ── Scoring constants ─────────────────────────────────────────────────────────
-BASE_SCORE  = 1000
-TIME_BONUS  = 500
+BASE_SCORE          = 1000
+TIME_BONUS          = 500
+STREAK_BONUS_PER_LVL = 200   # extra points per consecutive correct answer
+MAX_STREAK_LEVELS   = 3      # cap at level 3 → max +600
 
 
 @dataclass
@@ -40,6 +43,7 @@ class Player:
     device_id: str
     name: str
     score: int = 0
+    streak: int = 0   # consecutive correct answers
 
 
 @dataclass
@@ -130,6 +134,11 @@ class GameMaster:
 
         self.gs.answers[device_id] = {"answer": answer, "elapsed_ms": elapsed_ms}
         print(f"[answer] {device_id}: {answer}  ({elapsed_ms} ms)")
+        self._publish(T_ANSWER_COUNT, {
+            "question_id": self.gs.question_id,
+            "count":       len(self.gs.answers),
+            "total":       len(self.players),
+        })
 
     # ── State machine ─────────────────────────────────────────────────────────
 
@@ -203,10 +212,25 @@ class GameMaster:
         # Score players
         time_limit_ms = q["time_limit_s"] * 1000
         for device_id, ans in self.gs.answers.items():
-            if ans["answer"] == correct and device_id in self.players:
-                elapsed = min(ans["elapsed_ms"], time_limit_ms)
-                bonus   = round(TIME_BONUS * (1 - elapsed / time_limit_ms))
-                self.players[device_id].score += BASE_SCORE + bonus
+            if device_id not in self.players:
+                continue
+            player = self.players[device_id]
+            if ans["answer"] == correct:
+                player.streak += 1
+                elapsed      = min(ans["elapsed_ms"], time_limit_ms)
+                time_bonus   = round(TIME_BONUS * (1 - elapsed / time_limit_ms))
+                streak_level = min(player.streak - 1, MAX_STREAK_LEVELS)
+                streak_bonus = streak_level * STREAK_BONUS_PER_LVL
+                player.score += BASE_SCORE + time_bonus + streak_bonus
+                if streak_bonus:
+                    print(f"  streak ×{player.streak} for {device_id} → +{streak_bonus} bonus")
+            else:
+                player.streak = 0
+
+        # Players who didn't answer at all lose their streak
+        for device_id, player in self.players.items():
+            if device_id not in self.gs.answers:
+                player.streak = 0
 
         self.gs.state = "REVEAL"
         self._publish(T_REVEAL, {
@@ -221,7 +245,7 @@ class GameMaster:
     def _transition_to_scores(self):
         self.gs.state = "SCORES"
         scoreboard = sorted(
-            [{"device_id": p.device_id, "name": p.name, "score": p.score}
+            [{"device_id": p.device_id, "name": p.name, "score": p.score, "streak": p.streak}
              for p in self.players.values()],
             key=lambda x: x["score"],
             reverse=True,

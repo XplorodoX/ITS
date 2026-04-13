@@ -29,6 +29,13 @@ export interface ScoreEntry {
   device_id: string;
   name: string;
   score: number;
+  streak?: number;
+}
+
+export interface AnswerCount {
+  question_id: number;
+  count: number;
+  total: number;
 }
 
 export interface Scores {

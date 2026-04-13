@@ -90,6 +90,17 @@
   transition: transform 1s linear;
 }
 
+.answerCounter {
+  margin-left: auto;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2rem;
+  padding: 0.25rem 1rem;
+}
+
 .questionText {
   font-size: clamp(1.6rem, 4vw, 3rem);
   font-weight: 700;
@@ -248,6 +259,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.streakBadge {
+  margin-left: 0.5rem;
+  font-size: 1rem;
+  letter-spacing: -0.1em;
 }
 
 .scoreBarTrack {

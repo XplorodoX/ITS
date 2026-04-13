@@ -11,7 +11,7 @@ import ScoresScreen   from "@/components/screens/ScoresScreen";
 import styles from "@/components/screens/screens.module.css";
 
 export default function BeamerPage() {
-  const { connected, gameState, question, reveal, scores } = useMqtt();
+  const { connected, gameState, question, reveal, scores, answerCount } = useMqtt();
 
   // Keep track of registered players from scores payloads
   const playersRef = useRef<ScoreEntry[]>([]);
@@ -26,12 +26,12 @@ export default function BeamerPage() {
 
       case "QUESTION":
         return question
-          ? <QuestionScreen question={question} remainingS={gameState?.remaining_s ?? 0} voting={false} />
+          ? <QuestionScreen question={question} remainingS={gameState?.remaining_s ?? 0} voting={false} answerCount={null} />
           : <WaitingScreen players={playersRef.current} />;
 
       case "VOTING":
         return question
-          ? <QuestionScreen question={question} remainingS={gameState?.remaining_s ?? 0} voting={true} />
+          ? <QuestionScreen question={question} remainingS={gameState?.remaining_s ?? 0} voting={true} answerCount={answerCount} />
           : <WaitingScreen players={playersRef.current} />;
 
       case "REVEAL":
@@ -53,7 +53,7 @@ export default function BeamerPage() {
         return <WaitingScreen players={playersRef.current} />;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState, question, reveal, scores]);
+  }, [gameState, question, reveal, scores, answerCount]);
 
   return (
     <>

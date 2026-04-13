@@ -1,0 +1,9 @@
+#pragma once
+
+// WiFi-Zugangsdaten
+#define WIFI_SSID     "AALeC-Quiz"
+#define WIFI_PASSWORD "12345678"
+
+// MQTT-Broker
+#define MQTT_BROKER   "192.168.4.1"   // IP des Brokers im Netzwerk
+#define MQTT_PORT     1883

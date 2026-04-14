@@ -33,6 +33,7 @@ T_ANSWER       = "quiz/answer/#"      # subscribe pattern
 T_CONNECT      = "quiz/connect/#"     # subscribe pattern
 T_DISCONNECT   = "quiz/disconnect/#"  # subscribe pattern (LWT)
 T_CONTROL      = "quiz/control"       # start command from frontend
+T_NAMELIST     = "quiz/namelist"      # name list from frontend → relayed to devices
 
 MIN_PLAYERS = 1
 
@@ -97,6 +98,7 @@ class GameMaster:
         client.subscribe(T_CONNECT)
         client.subscribe(T_DISCONNECT)
         client.subscribe(T_CONTROL)
+        client.subscribe(T_NAMELIST)
         self._publish_state()
         self._publish_players()
 
@@ -120,6 +122,8 @@ class GameMaster:
             self._handle_answer(topic, data)
         elif topic == T_CONTROL:
             self._handle_control(data)
+        elif topic == T_NAMELIST:
+            self._handle_namelist(data)
 
     # ── Device lifecycle ──────────────────────────────────────────────────────
 
@@ -129,7 +133,8 @@ class GameMaster:
         with self._lock:
             if device_id in self.players:
                 self.players[device_id].online = True
-                print(f"[reconnect] {device_id} is back  ({self._online_count()} online)")
+                self.players[device_id].name   = name
+                print(f"[reconnect] {device_id} is back as '{name}'  ({self._online_count()} online)")
             elif self.gs.state == "WAITING":
                 self.players[device_id] = Player(device_id=device_id, name=name)
                 print(f"[register] {device_id} → '{name}'  ({self._online_count()} online)")
@@ -160,6 +165,17 @@ class GameMaster:
         elif action == "restart":
             print("[control] restart requested via MQTT")
             self.restart_game()
+
+    def _handle_namelist(self, data: dict):
+        """Relay the name list from the frontend to all devices (retained)."""
+        names = data.get("names", [])
+        if not isinstance(names, list) or len(names) == 0:
+            print("[namelist] empty or invalid — ignored")
+            return
+        names = [str(n)[:15] for n in names[:20]]
+        print(f"[namelist] relaying {len(names)} names to devices: {names}")
+        # publish with retain=True so devices that connect later also receive it
+        self.client.publish(T_NAMELIST, json.dumps({"names": names}), retain=True)
 
     # ── Answer handling ───────────────────────────────────────────────────────
 

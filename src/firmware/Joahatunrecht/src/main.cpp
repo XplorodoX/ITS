@@ -4,7 +4,41 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <AALeC-V3.h>
+#include <EEPROM.h>
 #include "config.h"
+
+// ===== EEPROM LAYOUT =====
+// Byte 0      : magic marker (0xA1) — prüft ob EEPROM schon beschrieben wurde
+// Bytes 1–16  : playerName (15 Zeichen + \0)
+#define EEPROM_MAGIC      0xA1
+#define EEPROM_SIZE       17
+#define EEPROM_ADDR_MAGIC 0
+#define EEPROM_ADDR_NAME  1
+
+// ===== SPIELERNAME =====
+char playerName[16] = "";   // gewählter Name, leer = noch nicht gesetzt
+
+void saveNameToEEPROM() {
+  EEPROM.write(EEPROM_ADDR_MAGIC, EEPROM_MAGIC);
+  for (int i = 0; i < 15; i++)
+    EEPROM.write(EEPROM_ADDR_NAME + i, playerName[i]);
+  EEPROM.write(EEPROM_ADDR_NAME + 15, '\0');
+  EEPROM.commit();
+}
+
+void loadNameFromEEPROM() {
+  if (EEPROM.read(EEPROM_ADDR_MAGIC) != EEPROM_MAGIC) return;  // noch nie beschrieben
+  for (int i = 0; i < 15; i++)
+    playerName[i] = (char)EEPROM.read(EEPROM_ADDR_NAME + i);
+  playerName[15] = '\0';
+}
+
+// ===== NAMENSLISTE (vom Frontend per quiz/namelist) =====
+#define MAX_NAMES      20
+#define MAX_NAME_LEN   16
+char nameList[MAX_NAMES][MAX_NAME_LEN];
+int  nameListCount = 0;
+bool nameListReceived = false;   // true sobald quiz/namelist eingetroffen
 
 #ifndef MQTT_BROKER_AP
 #define MQTT_BROKER_AP ""
@@ -74,6 +108,7 @@ bool         revealWasCorrect  = false;  // set by quiz/reveal handler
 void checkConnection();
 void displayShow();
 void connectMqttAsPlayer();
+void publishConnect();
 
 // ===== SOUND HELPERS =====
 // Spielt eine Melodie blockierend (nur für kurze Sequenzen am Anfang eines Screens)
@@ -226,6 +261,22 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
+  if (t == "quiz/namelist") {
+    nameListCount = 0;
+    JsonArray arr = doc["names"].as<JsonArray>();
+    for (JsonVariant v : arr) {
+      if (nameListCount >= MAX_NAMES) break;
+      const char* n = v.as<const char*>();
+      if (!n) continue;
+      strncpy(nameList[nameListCount], n, MAX_NAME_LEN - 1);
+      nameList[nameListCount][MAX_NAME_LEN - 1] = '\0';
+      nameListCount++;
+    }
+    nameListReceived = (nameListCount > 0);
+    Serial.printf("[NAMELIST] %d Namen empfangen\n", nameListCount);
+    return;
+  }
+
   if (t == "quiz/state") {
     const char* state = doc["state"];
     Serial.print("[STATE] -> ");
@@ -320,21 +371,27 @@ bool mqttReconnect() {
     mqtt.subscribe("quiz/state");
     mqtt.subscribe("quiz/question");
     mqtt.subscribe("quiz/reveal");
+    mqtt.subscribe("quiz/namelist");
     mqtt.subscribe(("quiz/ack/" + deviceId).c_str());
-    Serial.println("[MQTT] Subscribed: quiz/state, quiz/question, quiz/reveal, quiz/ack");
-    JsonDocument reg;
-    reg["device_id"] = deviceId;
-    reg["name"]      = deviceId;
-    char buf[128];
-    serializeJson(reg, buf);
-    mqtt.publish(("quiz/connect/" + deviceId).c_str(), buf);
-    Serial.print("[MQTT] Registrierung gesendet: ");
-    Serial.println(buf);
+    Serial.println("[MQTT] Subscribed: quiz/state, quiz/question, quiz/reveal, quiz/namelist, quiz/ack");
+    publishConnect();
     return true;
   }
   Serial.print("[MQTT] Verbindung fehlgeschlagen, rc=");
   Serial.println(mqtt.state());
   return false;
+}
+
+void publishConnect() {
+  const char* name = (strlen(playerName) > 0) ? playerName : deviceId.c_str();
+  JsonDocument reg;
+  reg["device_id"] = deviceId;
+  reg["name"]      = name;
+  char buf[128];
+  serializeJson(reg, buf);
+  mqtt.publish(("quiz/connect/" + deviceId).c_str(), buf);
+  Serial.print("[MQTT] Registrierung gesendet: ");
+  Serial.println(buf);
 }
 
 void connectMqttAsPlayer() {
@@ -435,6 +492,85 @@ void showConnected() {
   for (int i = 0; i < 5; i++) setLED(i,c_off);
 }
 
+// ===== NAMENSAUSWAHL-SCREEN =====
+// Wird aus showWaiting() aufgerufen sobald quiz/namelist empfangen wurde.
+// Rotary scrollt durch die Liste, Druck bestätigt.
+void showNameSelect() {
+  int selected = 0;
+  // Vorauswahl: aktuell gesetzter Name, falls in der Liste enthalten
+  for (int i = 0; i < nameListCount; i++) {
+    if (strcmp(nameList[i], playerName) == 0) { selected = i; break; }
+  }
+
+  aalec.reset_rotate(0);
+
+  while (true) {
+    checkConnection();
+    mqtt.loop();
+
+    // Rotary → scrollen
+    int rot = aalec.get_rotate();
+    if (rot != 0) {
+      selected = (selected + rot + nameListCount) % nameListCount;
+      aalec.reset_rotate(0);
+    }
+
+    // Knopfdruck → bestätigen
+    if (aalec.button_changed() && aalec.get_button() == 1) {
+      strncpy(playerName, nameList[selected], sizeof(playerName) - 1);
+      playerName[sizeof(playerName) - 1] = '\0';
+      saveNameToEEPROM();
+      publishConnect();   // sofort mit neuem Namen registrieren
+
+      // kurze Bestätigung
+      for (int i = 0; i < 5; i++) setLED(i, c_green);
+      aalec.display.clear();
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+      aalec.display.drawString(64, 0, "AALeC Quiz");
+      aalec.display.drawLine(0, 13, 128, 13);
+      aalec.display.setFont(ArialMT_Plain_16);
+      aalec.display.drawString(64, 20, "Hi, " + String(playerName) + "!");
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.drawString(64, 42, "Warte auf Quiz...");
+      displayShow();
+      delay(1500);
+      for (int i = 0; i < 5; i++) setLED(i, c_off);
+      return;
+    }
+
+    // Display: Liste mit Pfeil auf aktuellem Eintrag
+    // Zeige 4 Einträge, gewählter in der Mitte (Zeile 1 von 0–3)
+    pulseLEDs(millis(), c_cyan);
+    aalec.display.clear();
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+    aalec.display.drawString(64, 0, "Name waehlen:");
+    aalec.display.drawLine(0, 12, 128, 12);
+    aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
+
+    // 4 sichtbare Einträge, zentriert um "selected"
+    int startIdx = selected - 1;
+    for (int row = 0; row < 4; row++) {
+      int idx = startIdx + row;
+      if (idx < 0 || idx >= nameListCount) continue;
+      int y = 14 + row * 12;
+      bool isCurrent = (idx == selected);
+      if (isCurrent) {
+        aalec.display.fillRect(0, y - 1, 128, 12);
+        aalec.display.setColor(BLACK);
+      } else {
+        aalec.display.setColor(WHITE);
+      }
+      String line = (isCurrent ? "> " : "  ") + String(nameList[idx]);
+      aalec.display.drawString(2, y, line);
+      aalec.display.setColor(WHITE);
+    }
+    displayShow();
+    delay(20);
+  }
+}
+
 // ===== WARTE-SCREEN =====
 void showWaiting() {
   int spinFrame = 0;
@@ -443,6 +579,18 @@ void showWaiting() {
   while (quizState == STATE_WAITING) {
     checkConnection();
     mqtt.loop();
+
+    // Namensliste eingetroffen und noch kein Name gesetzt → Auswahl zeigen
+    if (nameListReceived && strlen(playerName) == 0) {
+      showNameSelect();
+      continue;
+    }
+
+    // Knopfdruck im Warte-Screen → Namensliste erneut zeigen (falls vorhanden)
+    if (nameListReceived && aalec.button_changed() && aalec.get_button() == 1) {
+      showNameSelect();
+      continue;
+    }
 
     unsigned long now = millis();
     if (now - lastUpdate < 80) { delay(10); continue; }
@@ -463,6 +611,11 @@ void showWaiting() {
     drawSpinner(64, 54, 5, spinFrame);
     aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
     aalec.display.drawString(0, 54, isHosting ? "[HOST]" : "[CLIENT]");
+    // Dezent aktuellen Namen unten rechts anzeigen
+    if (strlen(playerName) > 0) {
+      aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
+      aalec.display.drawString(122, 54, String(playerName));
+    }
     displayShow();
   }
 }
@@ -1176,6 +1329,8 @@ void checkConnection() {
 void setup() {
   Serial.begin(115200);
   delay(100);
+  EEPROM.begin(EEPROM_SIZE);
+  loadNameFromEEPROM();
   deviceId = "aAlec-" + String(ESP.getChipId(), HEX);
   Serial.println("\n\n===== AALeC Quiz =====");
   Serial.print("[BOOT] Device ID: ");

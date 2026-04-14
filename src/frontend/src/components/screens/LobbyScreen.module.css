@@ -87,6 +87,108 @@
   cursor: not-allowed;
 }
 
+/* ── Namenslisten-Editor ── */
+.nameListEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 260px;
+  max-width: 500px;
+  width: 100%;
+  margin-top: 1.2rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.nameListTitle {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 0.25rem;
+}
+
+.nameListTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 1.6rem;
+}
+
+.nameTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #1f6feb33;
+  border: 1px solid #1f6feb66;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.nameTagRemove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+}
+.nameTagRemove:hover { color: #ef4444; }
+
+.nameListInputRow {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.nameInput {
+  flex: 1;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+.nameInput:focus {
+  outline: none;
+  border-color: #1f6feb;
+}
+
+.addBtn {
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: #1f6feb;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.addBtn:hover:not(:disabled) { background: #388bfd; }
+.addBtn:disabled { background: #21262d; color: #6e7681; cursor: not-allowed; }
+
+.sendBtn {
+  align-self: flex-start;
+  padding: 0.45rem 1.2rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: #6e40c9;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.sendBtn:hover:not(:disabled) { background: #8957e5; transform: scale(1.03); }
+.sendBtn:disabled { background: #21262d; color: #6e7681; cursor: not-allowed; }
+
+.sentBtn {
+  background: #238636 !important;
+}
+
 @keyframes popIn {
   from { transform: scale(0.85); opacity: 0; }
   to   { transform: scale(1);    opacity: 1; }

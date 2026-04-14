@@ -24,12 +24,17 @@ export default function BeamerPage() {
     publish("quiz/control", { action: "restart" });
   }, [publish]);
 
+  const handleSendNameList = useCallback((names: string[]) => {
+    publish("quiz/namelist", { names });
+  }, [publish]);
+
   const waitingScreen = (
     <WaitingScreen
       players={lobbyPlayers}
       minPlayers={minPlayers}
       gameState={currentState}
       onStart={handleStart}
+      onSendNameList={handleSendNameList}
     />
   );
 

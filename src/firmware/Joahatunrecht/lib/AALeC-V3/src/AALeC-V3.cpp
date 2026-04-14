@@ -69,10 +69,16 @@ void c_AALeC_V3::init(int numLeds) {
 	display.setFont(ArialMT_Plain_10);
 	display.setTextAlignment(TEXT_ALIGN_LEFT);
 
-	nunchuck1.begin();
-  	if(nunchuck1.type == UnknownChuck) {
-    	nunchuck1.type = NUNCHUCK;
-  	}
+	// Initialize Nunchuck only when it ACKs on I2C, otherwise the WiiChuck
+	// library prints repeated "_burstRead error: 2" messages.
+	if (nunchuck1.isConnected()) {
+		nunchuck1.begin();
+		if (nunchuck1.type == UnknownChuck) {
+			nunchuck1.type = NUNCHUCK;
+		}
+	} else {
+		Serial.println("[AALeC] Kein Nunchuck auf I2C gefunden, ueberspringe Init");
+	}
 
 	// Try to initialize BME280
     if (bme280.begin(BME280_ADDR)) {

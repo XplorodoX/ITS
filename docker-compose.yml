@@ -1,0 +1,31 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"   # MQTT (TCP) — for ESP8266 firmware clients
+      - "9001:9001"   # MQTT over WebSockets — for beamer frontend
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  game-master:
+    build:
+      context: ./src/backend
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    environment:
+      - BROKER=${BROKER:-mosquitto}
+      - QUESTIONS=${QUESTIONS:-questions.json}
+    command:
+      - "--broker"
+      - "${BROKER:-mosquitto}"
+      - "--questions"
+      - "${QUESTIONS:-questions.json}"
+      - "--auto-start"
+    restart: unless-stopped

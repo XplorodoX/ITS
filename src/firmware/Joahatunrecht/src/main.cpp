@@ -20,6 +20,9 @@ char correctAnswer      = 'B';
 int  answerCounts[4]    = { 0, 0, 0, 0 };
 int  selectedAnswer     = 0;   // 0=A, 1=B, 2=C, 3=D
 
+// ===== FORWARD DECLARATIONS =====
+void checkConnection();
+
 // ===== MQTT =====
 WiFiClient   wifiClient;
 PubSubClient mqtt(wifiClient);
@@ -33,7 +36,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   Serial.write(payload, length);
   Serial.println();
 
-  StaticJsonDocument<256> doc;
+  JsonDocument doc;
   if (deserializeJson(doc, payload, length) != DeserializationError::Ok) {
     Serial.println("[MQTT] JSON-Fehler, ignoriere Nachricht");
     return;
@@ -78,7 +81,7 @@ bool mqttReconnect() {
     mqtt.subscribe("quiz/state");
     mqtt.subscribe("quiz/reveal");
     Serial.println("[MQTT] Subscribed: quiz/state, quiz/reveal");
-    StaticJsonDocument<128> reg;
+    JsonDocument reg;
     reg["device_id"] = deviceId;
     reg["name"]      = deviceId;
     char buf[128];
@@ -147,10 +150,7 @@ void showConnectingFrame() {
   aalec.display.drawString(4, 18, dotStr);
   drawSpinner(112, 24, 6, _connSpin);
   aalec.display.drawString(4, 33, ">" + String(apSSID));
-
-  // Countdown-Balken: zeigt wieviel von 60s noch übrig
-  // wird von außen mit elapsed gefüllt
-  aalec.display.display();
+  // display() wird vom Aufrufer gemacht, damit Countdown-Text noch ergänzt werden kann
 }
 
 // ===== VERBUNDEN-SCREEN =====
@@ -178,7 +178,7 @@ void showWaiting() {
   unsigned long lastUpdate = 0;
 
   while (quizState == STATE_WAITING) {
-    mqttReconnect();
+    checkConnection();
     mqtt.loop();
 
     unsigned long now = millis();
@@ -217,7 +217,7 @@ void showVoting() {
   for (int i = 0; i < 5; i++) aalec.set_rgb_strip(i, c_white);
 
   while (quizState == STATE_VOTING) {
-    mqttReconnect();
+    checkConnection();
     mqtt.loop();
 
     // Drehknopf navigiert A/B/C/D
@@ -233,7 +233,7 @@ void showVoting() {
       Serial.print("[INPUT] Antwort gewaehlt: ");
       Serial.println(chosen);
       quizState = STATE_VOTED;
-      StaticJsonDocument<128> ans;
+      JsonDocument ans;
       ans["answer"] = String(chosen);
       char buf[128];
       serializeJson(ans, buf);
@@ -302,7 +302,7 @@ void showVoted() {
   for (int i = 0; i < 5; i++) aalec.set_rgb_strip(i, c_cyan);
 
   while (quizState == STATE_VOTED) {
-    mqttReconnect();
+    checkConnection();
     mqtt.loop();
 
     unsigned long now = millis();
@@ -346,6 +346,8 @@ void showReveal() {
   if (total == 0) total = 1;
 
   while (quizState == STATE_REVEAL) {
+    checkConnection();
+    mqtt.loop();
     aalec.display.clear();
     aalec.display.setFont(ArialMT_Plain_10);
     aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
@@ -392,9 +394,100 @@ void showReveal() {
   }
 }
 
+// ===== RECONNECT NACH VERBINDUNGSVERLUST =====
+// Gibt true zurück wenn Verbindung wiederhergestellt, false wenn Timeout → AP-Modus
+bool handleConnectionLoss() {
+  Serial.println("[WiFi] Verbindung verloren — starte Reconnect");
+  mqtt.disconnect();
+  WiFi.disconnect();
+  delay(100);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(apSSID, apPass);
+
+  unsigned long startTime = millis();
+  const unsigned long timeout = 60000;
+
+  while (millis() - startTime < timeout) {
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.print("[WiFi] Reconnect erfolgreich! IP: ");
+      Serial.println(WiFi.localIP());
+
+      mqtt.setServer(MQTT_BROKER, MQTT_PORT);
+      mqtt.setCallback(mqttCallback);
+      mqttReconnect();
+
+      // Kurz "Verbunden!" zeigen
+      for (int i = 0; i < 5; i++) aalec.set_rgb_strip(i, c_green);
+      aalec.display.clear();
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+      aalec.display.drawString(64, 0, "AALeC Quiz");
+      aalec.display.drawLine(0, 13, 128, 13);
+      aalec.display.setFont(ArialMT_Plain_16);
+      aalec.display.drawString(64, 18, "Verbunden!");
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.drawString(64, 38, WiFi.localIP().toString());
+      aalec.display.display();
+      delay(1500);
+      for (int i = 0; i < 5; i++) aalec.set_rgb_strip(i, c_off);
+
+      isHosting    = false;
+      quizState    = STATE_WAITING;
+      return true;
+    }
+
+    unsigned long now = millis();
+    if (now - _connLast >= 120) {
+      unsigned long elapsed = now - startTime;
+      showConnectingFrame();
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
+      aalec.display.drawString(124, 18, String((timeout - elapsed) / 1000) + "s");
+      aalec.display.display();
+    }
+    delay(10);
+  }
+
+  // Timeout → AP-Modus
+  Serial.println("[WiFi] Reconnect Timeout — starte AP");
+  WiFi.disconnect();
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(apSSID, apPass);
+  isHosting = true;
+  quizState = STATE_WAITING;
+
+  for (int i = 0; i < 5; i++) aalec.set_rgb_strip(i, c_yellow);
+  aalec.display.clear();
+  aalec.display.setFont(ArialMT_Plain_10);
+  aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+  aalec.display.drawString(64, 0, "AALeC Quiz");
+  aalec.display.drawLine(0, 13, 128, 13);
+  aalec.display.setFont(ArialMT_Plain_16);
+  aalec.display.drawString(64, 16, "Hosting!");
+  aalec.display.setFont(ArialMT_Plain_10);
+  aalec.display.drawString(64, 34, apSSID);
+  aalec.display.drawString(64, 46, WiFi.softAPIP().toString());
+  aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
+  aalec.display.drawString(0, 54, "[HOST]");
+  aalec.display.display();
+  delay(2000);
+  for (int i = 0; i < 5; i++) aalec.set_rgb_strip(i, c_off);
+
+  return false;
+}
+
+// Prüft nur WiFi — bei Verlust wird handleConnectionLoss() aufgerufen
+// MQTT-Abriss allein löst keinen Reconnect aus
+void checkConnection() {
+  if (WiFi.status() != WL_CONNECTED) {
+    handleConnectionLoss();
+  }
+}
+
 // ===== SETUP =====
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(100);
   deviceId = "aAlec-" + String(ESP.getChipId(), HEX);
   Serial.println("\n\n===== AALeC Quiz =====");
@@ -409,6 +502,8 @@ void setup() {
   Serial.print("[WiFi] Verbinde mit '");
   Serial.print(apSSID);
   Serial.println("' ...");
+  WiFi.persistent(false);      // kein Flash-Write bei jedem Verbindungsversuch
+  WiFi.setAutoReconnect(false);
   WiFi.mode(WIFI_STA);
   WiFi.begin(apSSID, apPass);
 
@@ -419,14 +514,17 @@ void setup() {
   while (millis() - startTime < timeout) {
     if (WiFi.status() == WL_CONNECTED) { connected = true; break; }
 
-    unsigned long elapsed = millis() - startTime;
-    showConnectingFrame();
+    unsigned long now = millis();
+    if (now - _connLast >= 120) {
+      unsigned long elapsed = now - startTime;
+      showConnectingFrame();   // zeichnet intern und setzt _connLast
 
-    // Countdown zusätzlich anzeigen
-    aalec.display.setFont(ArialMT_Plain_10);
-    aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
-    aalec.display.drawString(124, 18, String((timeout - elapsed) / 1000) + "s");
-    aalec.display.display();
+      // Countdown oben rechts ergänzen (Display noch nicht geflusht)
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
+      aalec.display.drawString(124, 18, String((timeout - elapsed) / 1000) + "s");
+      aalec.display.display();
+    }
 
     delay(10);
   }

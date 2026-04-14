@@ -276,45 +276,57 @@ class GameMaster:
 
     # ── Run ───────────────────────────────────────────────────────────────────
 
-    def run(self):
+    def run(self, auto_start: bool = False):
         self.client.connect(self.broker, self.port, keepalive=60)
         self.client.loop_start()
 
         print("AALeC Quiz — Game Master")
         print(f"  Broker : {self.broker}:{self.port}")
         print(f"  Questions: {len(self.questions)}")
-        print("Commands: [s] start game   [q] quit")
 
-        try:
-            while True:
-                cmd = input("> ").strip().lower()
-                if cmd == "s":
-                    self.start_game()
-                elif cmd == "q":
-                    break
-        except (KeyboardInterrupt, EOFError):
-            pass
-        finally:
-            if self._timer:
-                self._timer.cancel()
-            self.client.loop_stop()
-            self.client.disconnect()
-            print("Bye.")
+        if auto_start:
+            print("  Mode   : auto-start (non-interactive)")
+            print("[game] waiting for players to register …")
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                pass
+        else:
+            print("Commands: [s] start game   [q] quit")
+            try:
+                while True:
+                    cmd = input("> ").strip().lower()
+                    if cmd == "s":
+                        self.start_game()
+                    elif cmd == "q":
+                        break
+            except (KeyboardInterrupt, EOFError):
+                pass
+
+        if self._timer:
+            self._timer.cancel()
+        self.client.loop_stop()
+        self.client.disconnect()
+        print("Bye.")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="AALeC Quiz Game Master")
-    parser.add_argument("--broker",    default="localhost",      help="MQTT broker host")
-    parser.add_argument("--port",      default=1883, type=int,   help="MQTT broker port")
-    parser.add_argument("--questions", default="questions.json", help="Path to questions JSON")
+    parser.add_argument("--broker",     default="localhost",      help="MQTT broker host")
+    parser.add_argument("--port",       default=1883, type=int,   help="MQTT broker port")
+    parser.add_argument("--questions",  default="questions.json", help="Path to questions JSON")
+    parser.add_argument("--auto-start", action="store_true",      help="Non-interactive mode (for Docker)")
     args = parser.parse_args()
 
     with open(args.questions, encoding="utf-8") as f:
         questions = json.load(f)
 
-    GameMaster(broker=args.broker, port=args.port, questions=questions).run()
+    GameMaster(broker=args.broker, port=args.port, questions=questions).run(
+        auto_start=args.auto_start
+    )
 
 
 if __name__ == "__main__":

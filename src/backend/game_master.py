@@ -33,7 +33,8 @@ T_ANSWER       = "quiz/answer/#"      # subscribe pattern
 T_CONNECT      = "quiz/connect/#"     # subscribe pattern
 T_DISCONNECT   = "quiz/disconnect/#"  # subscribe pattern (LWT)
 T_CONTROL      = "quiz/control"       # start command from frontend
-T_NAMELIST     = "quiz/namelist"      # name list from frontend → relayed to devices
+T_NAMELIST     = "quiz/namelist"      # name list for devices
+T_NAMELIST_SET = "quiz/namelist/set"  # name list from frontend
 
 MIN_PLAYERS = 1
 
@@ -98,7 +99,7 @@ class GameMaster:
         client.subscribe(T_CONNECT)
         client.subscribe(T_DISCONNECT)
         client.subscribe(T_CONTROL)
-        client.subscribe(T_NAMELIST)
+        client.subscribe(T_NAMELIST_SET)
         self._publish_state()
         self._publish_players()
 
@@ -122,7 +123,7 @@ class GameMaster:
             self._handle_answer(topic, data)
         elif topic == T_CONTROL:
             self._handle_control(data)
-        elif topic == T_NAMELIST:
+        elif topic == T_NAMELIST_SET:
             self._handle_namelist(data)
 
     # ── Device lifecycle ──────────────────────────────────────────────────────
@@ -174,7 +175,7 @@ class GameMaster:
             return
         names = [str(n)[:15] for n in names[:20]]
         print(f"[namelist] relaying {len(names)} names to devices: {names}")
-        # publish with retain=True so devices that connect later also receive it
+        # Publish on the device topic and retain it so late-joining firmware receives it once.
         self.client.publish(T_NAMELIST, json.dumps({"names": names}), retain=True)
 
     # ── Answer handling ───────────────────────────────────────────────────────

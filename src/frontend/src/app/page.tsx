@@ -25,7 +25,7 @@ export default function BeamerPage() {
   }, [publish]);
 
   const handleSendNameList = useCallback((names: string[]) => {
-    publish("quiz/namelist", { names });
+    publish("quiz/namelist/set", { names });
   }, [publish]);
 
   const waitingScreen = (

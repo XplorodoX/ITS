@@ -6,6 +6,10 @@
 #include <AALeC-V3.h>
 #include "config.h"
 
+#ifndef MQTT_BROKER_AP
+#define MQTT_BROKER_AP ""
+#endif
+
 // ===== LED-HELLIGKEIT =====
 // Alle LED-Aufrufe laufen durch setLED() — Helligkeit zentral über LED_BRIGHTNESS steuern.
 static const float LED_BRIGHTNESS = 0.12f;  // 12% — anpassen nach Bedarf
@@ -59,12 +63,50 @@ bool         revealWasCorrect  = false;  // set by quiz/reveal handler
 // ===== FORWARD DECLARATIONS =====
 void checkConnection();
 void displayShow();
+void connectMqttAsPlayer();
 
 // ===== MQTT =====
 WiFiClient   wifiClient;
 PubSubClient mqtt(wifiClient);
 
 String deviceId;   // aAlec-<ChipID>
+
+bool resolveBrokerIP(IPAddress& brokerIP) {
+  const char* targets[2];
+  uint8_t targetCount = 0;
+
+  // Im Host/AP-Modus zuerst optionalen AP-spezifischen Broker versuchen.
+  if (isHosting && strlen(MQTT_BROKER_AP) > 0) {
+    targets[targetCount++] = MQTT_BROKER_AP;
+  }
+  targets[targetCount++] = MQTT_BROKER;
+
+  for (uint8_t i = 0; i < targetCount; i++) {
+    const char* target = targets[i];
+    if (!target || strlen(target) == 0) continue;
+
+    Serial.print("[MQTT] Broker-Ziel pruefen: ");
+    Serial.println(target);
+
+    if (brokerIP.fromString(target)) {
+      Serial.print("[MQTT] Broker-IP (direkt): ");
+      Serial.println(brokerIP.toString());
+      return true;
+    }
+
+    if (WiFi.hostByName(target, brokerIP)) {
+      Serial.print("[MQTT] Broker-IP (DNS/mDNS): ");
+      Serial.println(brokerIP.toString());
+      return true;
+    }
+  }
+
+  Serial.println("[MQTT] Broker-Adresse nicht aufloesbar");
+  if (isHosting) {
+    Serial.println("[MQTT] Tipp: MQTT_BROKER_AP in config.h auf Client-IP setzen (z.B. 192.168.4.2)");
+  }
+  return false;
+}
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   Serial.print("[MQTT] Nachricht auf '");
@@ -184,16 +226,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 bool mqttReconnect() {
   if (mqtt.connected()) return true;
 
-  // mDNS-Auflösung: Hostname → IP (z.B. "MacBook-Pro-von-Florian.local")
+  // Broker-Adresse robust auflösen: direkte IP oder DNS/mDNS.
   IPAddress brokerIP;
-  Serial.print("[MQTT] Löse Broker-Hostname auf: ");
-  Serial.println(MQTT_BROKER);
-  if (!WiFi.hostByName(MQTT_BROKER, brokerIP)) {
-    Serial.println("[MQTT] Hostname nicht auflösbar — Verbindung abgebrochen");
+  if (!resolveBrokerIP(brokerIP)) {
+    Serial.println("[MQTT] Verbindung abgebrochen (Broker unbekannt)");
     return false;
   }
-  Serial.print("[MQTT] Broker-IP: ");
-  Serial.println(brokerIP.toString());
+
   mqtt.setServer(brokerIP, MQTT_PORT);
   mqtt.setBufferSize(512);
 
@@ -222,6 +261,11 @@ bool mqttReconnect() {
   Serial.print("[MQTT] Verbindung fehlgeschlagen, rc=");
   Serial.println(mqtt.state());
   return false;
+}
+
+void connectMqttAsPlayer() {
+  mqtt.setCallback(mqttCallback);
+  mqttReconnect();
 }
 
 // ===== DISPLAY HELPER =====
@@ -832,8 +876,7 @@ bool handleConnectionLoss() {
       Serial.print("[WiFi] Reconnect erfolgreich! IP: ");
       Serial.println(WiFi.localIP());
 
-      mqtt.setCallback(mqttCallback);
-      mqttReconnect();
+      connectMqttAsPlayer();
 
       // Kurz "Verbunden!" zeigen
       for (int i = 0; i < 5; i++) setLED(i,c_green);
@@ -874,6 +917,7 @@ bool handleConnectionLoss() {
   WiFi.softAP(apSSID, apPass);
   isHosting = true;
   quizState = STATE_WAITING;
+  connectMqttAsPlayer();
 
   for (int i = 0; i < 5; i++) setLED(i,c_yellow);
   aalec.display.clear();
@@ -898,7 +942,14 @@ bool handleConnectionLoss() {
 // Prüft WiFi (mit Debounce) und MQTT getrennt.
 // WiFi-Flicker (kurzes WL_DISCONNECTED) löst keinen Reconnect aus.
 void checkConnection() {
-  if (isHosting) return;  // AP-Modus: kein Reconnect, wir sind selbst das Netzwerk
+  if (isHosting) {
+    // Als Host bleiben wir trotzdem MQTT-Client und spielen mit.
+    if (!mqtt.connected()) {
+      Serial.println("[MQTT] Host-Modus ohne MQTT — reconnect …");
+      mqttReconnect();
+    }
+    return;
+  }
 
   if (WiFi.status() != WL_CONNECTED) {
     _wifiFailCount++;
@@ -967,8 +1018,7 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     // MQTT einrichten
-    mqtt.setCallback(mqttCallback);
-    mqttReconnect();
+    connectMqttAsPlayer();
 
     // Verbunden-Screen mit "CLIENT"-Badge
     for (int i = 0; i < 5; i++) setLED(i,c_green);
@@ -994,6 +1044,7 @@ void setup() {
     WiFi.disconnect();
     WiFi.mode(WIFI_AP);
     WiFi.softAP(apSSID, apPass);
+    connectMqttAsPlayer();
     Serial.print("[WiFi] AP gestartet. IP: ");
     Serial.println(WiFi.softAPIP());
 

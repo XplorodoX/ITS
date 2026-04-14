@@ -11,9 +11,10 @@ interface Props {
   gameState: string;
   onStart: () => void;
   onSendNameList: (names: string[]) => void;
+  onResetNames: () => void;
 }
 
-export default function WaitingScreen({ players, minPlayers, gameState, onStart, onSendNameList }: Props) {
+export default function WaitingScreen({ players, minPlayers, gameState, onStart, onSendNameList, onResetNames }: Props) {
   const onlineCount = players.filter((p) => p.online).length;
   const missing     = Math.max(0, minPlayers - onlineCount);
   const canStart    = gameState === "WAITING" && missing === 0;
@@ -105,6 +106,13 @@ export default function WaitingScreen({ players, minPlayers, gameState, onStart,
             disabled={names.length === 0}
           >
             {sent ? "✓ Gesendet" : "▶ Liste senden"}
+          </button>
+
+          <button
+            className={`${lobbyStyles.sendBtn} ${lobbyStyles.resetBtn}`}
+            onClick={onResetNames}
+          >
+            Namen auf Geraeten zuruecksetzen
           </button>
         </div>
       )}

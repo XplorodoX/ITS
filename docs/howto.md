@@ -81,6 +81,22 @@ quiz/state   {"state":"VOTING",...}
 quiz/answer/aAlec-XXXXXX {"question_id":1,"answer":"B","elapsed_ms":4200}
 quiz/reveal  {"question_id":1,"correct":"B","counts":{...}}
 quiz/scores  {"scores":[...]}
+
+Namensliste (Frontend -> Backend -> Geräte) testen:
+
+mosquitto_pub -h 127.0.0.1 -p 1883 \
+  -t "quiz/namelist/set" \
+  -m '{"names":["flo","lisa","bro"]}'
+
+Der Game Master relayt dann retained auf `quiz/namelist` für die AALeC-Geräte.
+
+Namenswahl auf Geräten remote neu starten (wie der neue Beamer-Button):
+
+mosquitto_pub -h 127.0.0.1 -p 1883 \
+  -t "quiz/control" \
+  -m '{"action":"reset_names"}'
+
+Der Game Master sendet dann `quiz/name/reset`, Geräte löschen den gespeicherten Namen und starten die Auswahl neu.
 Kurzfassung
 Was	Wie
 Mac ins Hotspot-WLAN	SSID AALeC-Quiz, PW 12345678

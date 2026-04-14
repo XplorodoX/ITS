@@ -35,6 +35,7 @@ T_DISCONNECT   = "quiz/disconnect/#"  # subscribe pattern (LWT)
 T_CONTROL      = "quiz/control"       # start command from frontend
 T_NAMELIST     = "quiz/namelist"      # name list for devices
 T_NAMELIST_SET = "quiz/namelist/set"  # name list from frontend
+T_NAME_RESET   = "quiz/name/reset"    # reset command for device-side name selection
 
 MIN_PLAYERS = 1
 
@@ -166,6 +167,9 @@ class GameMaster:
         elif action == "restart":
             print("[control] restart requested via MQTT")
             self.restart_game()
+        elif action == "reset_names":
+            print("[control] device name reset requested via MQTT")
+            self._publish(T_NAME_RESET, {"reset": True, "source": "beamer"})
 
     def _handle_namelist(self, data: dict):
         """Relay the name list from the frontend to all devices (retained)."""

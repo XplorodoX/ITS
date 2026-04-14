@@ -189,6 +189,15 @@
   background: #238636 !important;
 }
 
+.resetBtn {
+  margin-top: 0.35rem;
+  background: #b45309;
+}
+
+.resetBtn:hover:not(:disabled) {
+  background: #d97706;
+}
+
 @keyframes popIn {
   from { transform: scale(0.85); opacity: 0; }
   to   { transform: scale(1);    opacity: 1; }

@@ -28,6 +28,10 @@ export default function BeamerPage() {
     publish("quiz/namelist/set", { names });
   }, [publish]);
 
+  const handleResetNames = useCallback(() => {
+    publish("quiz/control", { action: "reset_names" });
+  }, [publish]);
+
   const waitingScreen = (
     <WaitingScreen
       players={lobbyPlayers}
@@ -35,6 +39,7 @@ export default function BeamerPage() {
       gameState={currentState}
       onStart={handleStart}
       onSendNameList={handleSendNameList}
+      onResetNames={handleResetNames}
     />
   );
 

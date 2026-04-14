@@ -9,36 +9,47 @@
 
 // ===== EEPROM LAYOUT =====
 // Byte 0      : magic marker (0xA1) — prüft ob EEPROM schon beschrieben wurde
-// Bytes 1–16  : playerName (15 Zeichen + \0)
+// Bytes 1–6   : playerName (5 Zeichen + \0)
 #define EEPROM_MAGIC      0xA1
-#define EEPROM_SIZE       17
+#define EEPROM_SIZE       7
 #define EEPROM_ADDR_MAGIC 0
 #define EEPROM_ADDR_NAME  1
 
 // ===== SPIELERNAME =====
-char playerName[16] = "";   // gewählter Name, leer = noch nicht gesetzt
+char playerName[6] = "";   // gewählter Name, leer = noch nicht gesetzt
+const unsigned long NAME_RESET_HOLD_MS = 3000;
 
 void saveNameToEEPROM() {
   EEPROM.write(EEPROM_ADDR_MAGIC, EEPROM_MAGIC);
-  for (int i = 0; i < 15; i++)
+  for (int i = 0; i < 5; i++)
     EEPROM.write(EEPROM_ADDR_NAME + i, playerName[i]);
-  EEPROM.write(EEPROM_ADDR_NAME + 15, '\0');
+  EEPROM.write(EEPROM_ADDR_NAME + 5, '\0');
   EEPROM.commit();
 }
 
 void loadNameFromEEPROM() {
   if (EEPROM.read(EEPROM_ADDR_MAGIC) != EEPROM_MAGIC) return;  // noch nie beschrieben
-  for (int i = 0; i < 15; i++)
+  for (int i = 0; i < 5; i++)
     playerName[i] = (char)EEPROM.read(EEPROM_ADDR_NAME + i);
-  playerName[15] = '\0';
+  playerName[5] = '\0';
 }
 
-// ===== NAMENSLISTE (vom Frontend per quiz/namelist) =====
+void clearNameInEEPROM() {
+  EEPROM.write(EEPROM_ADDR_MAGIC, 0x00);
+  for (int i = 0; i < 6; i++) {
+    EEPROM.write(EEPROM_ADDR_NAME + i, '\0');
+  }
+  EEPROM.commit();
+  playerName[0] = '\0';
+}
+
+// ===== NAMENSLISTE (Frontend -> Backend -> quiz/namelist) =====
 #define MAX_NAMES      20
 #define MAX_NAME_LEN   16
 char nameList[MAX_NAMES][MAX_NAME_LEN];
 int  nameListCount = 0;
-bool nameListReceived = false;   // true sobald quiz/namelist eingetroffen
+bool nameListReceived = false;   // true sobald relay auf quiz/namelist eingetroffen
+bool nameResetRequested = false; // remote reset via MQTT control path
 
 #ifndef MQTT_BROKER_AP
 #define MQTT_BROKER_AP ""
@@ -277,6 +288,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
+  if (t == "quiz/name/reset") {
+    bool doReset = doc["reset"] | false;
+    if (doReset) {
+      Serial.println("[NAME] Remote reset empfangen");
+      clearNameInEEPROM();
+      nameResetRequested = true;
+    }
+    return;
+  }
+
   if (t == "quiz/state") {
     const char* state = doc["state"];
     Serial.print("[STATE] -> ");
@@ -372,8 +393,9 @@ bool mqttReconnect() {
     mqtt.subscribe("quiz/question");
     mqtt.subscribe("quiz/reveal");
     mqtt.subscribe("quiz/namelist");
+    mqtt.subscribe("quiz/name/reset");
     mqtt.subscribe(("quiz/ack/" + deviceId).c_str());
-    Serial.println("[MQTT] Subscribed: quiz/state, quiz/question, quiz/reveal, quiz/namelist, quiz/ack");
+    Serial.println("[MQTT] Subscribed (device topics): quiz/state, quiz/question, quiz/reveal, quiz/namelist, quiz/name/reset, quiz/ack");
     publishConnect();
     return true;
   }
@@ -492,14 +514,25 @@ void showConnected() {
   for (int i = 0; i < 5; i++) setLED(i,c_off);
 }
 
-// ===== NAMENSAUSWAHL-SCREEN =====
-// Wird aus showWaiting() aufgerufen sobald quiz/namelist empfangen wurde.
-// Rotary scrollt durch die Liste, Druck bestätigt.
+// ===== NAMENSEINGABE-SCREEN =====
+// Der Name wird direkt am AALeC eingegeben (max. 5 Zeichen).
+// Rotary ändert Zeichen, Druck springt zum nächsten Zeichen,
+// auf Position 5 speichert ein Druck den Namen.
 void showNameSelect() {
-  int selected = 0;
-  // Vorauswahl: aktuell gesetzter Name, falls in der Liste enthalten
-  for (int i = 0; i < nameListCount; i++) {
-    if (strcmp(nameList[i], playerName) == 0) { selected = i; break; }
+  static const char charset[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const int charsetLen = (int)strlen(charset);
+  int idx[5] = {1, 1, 1, 1, 1}; // Start bei 'A'
+  int cursor = 0;
+
+  // Vorbelegung aus gespeichertem Namen (falls vorhanden)
+  for (int i = 0; i < 5; i++) {
+    char c = (i < (int)strlen(playerName)) ? playerName[i] : ' ';
+    for (int j = 0; j < charsetLen; j++) {
+      if (charset[j] == c) {
+        idx[i] = j;
+        break;
+      }
+    }
   }
 
   aalec.reset_rotate(0);
@@ -508,64 +541,70 @@ void showNameSelect() {
     checkConnection();
     mqtt.loop();
 
-    // Rotary → scrollen
-    int rot = aalec.get_rotate();
-    if (rot != 0) {
-      selected = (selected + rot + nameListCount) % nameListCount;
+    if (aalec.rotate_changed()) {
+      int rot = aalec.get_rotate();
+      idx[cursor] = (idx[cursor] + (rot > 0 ? -1 : 1) + charsetLen) % charsetLen;
       aalec.reset_rotate(0);
     }
 
-    // Knopfdruck → bestätigen
     if (aalec.button_changed() && aalec.get_button() == 1) {
-      strncpy(playerName, nameList[selected], sizeof(playerName) - 1);
-      playerName[sizeof(playerName) - 1] = '\0';
-      saveNameToEEPROM();
-      publishConnect();   // sofort mit neuem Namen registrieren
+      if (cursor < 4) {
+        cursor++;
+      } else {
+        char draft[6];
+        for (int i = 0; i < 5; i++) draft[i] = charset[idx[i]];
+        draft[5] = '\0';
 
-      // kurze Bestätigung
-      for (int i = 0; i < 5; i++) setLED(i, c_green);
-      aalec.display.clear();
-      aalec.display.setFont(ArialMT_Plain_10);
-      aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
-      aalec.display.drawString(64, 0, "AALeC Quiz");
-      aalec.display.drawLine(0, 13, 128, 13);
-      aalec.display.setFont(ArialMT_Plain_16);
-      aalec.display.drawString(64, 20, "Hi, " + String(playerName) + "!");
-      aalec.display.setFont(ArialMT_Plain_10);
-      aalec.display.drawString(64, 42, "Warte auf Quiz...");
-      displayShow();
-      delay(1500);
-      for (int i = 0; i < 5; i++) setLED(i, c_off);
-      return;
+        // trailing spaces entfernen, mindestens 1 Zeichen behalten
+        int end = 4;
+        while (end >= 0 && draft[end] == ' ') end--;
+        if (end < 0) {
+          draft[0] = 'A';
+          end = 0;
+        }
+
+        for (int i = 0; i <= end; i++) playerName[i] = draft[i];
+        playerName[end + 1] = '\0';
+
+        saveNameToEEPROM();
+        publishConnect(); // Name an Server senden/aktualisieren
+
+        for (int i = 0; i < 5; i++) setLED(i, c_green);
+        aalec.display.clear();
+        aalec.display.setFont(ArialMT_Plain_10);
+        aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+        aalec.display.drawString(64, 0, "AALeC Quiz");
+        aalec.display.drawLine(0, 13, 128, 13);
+        aalec.display.setFont(ArialMT_Plain_16);
+        aalec.display.drawString(64, 20, "Hi, " + String(playerName) + "!");
+        aalec.display.setFont(ArialMT_Plain_10);
+        aalec.display.drawString(64, 42, "Name gespeichert");
+        displayShow();
+        delay(1200);
+        for (int i = 0; i < 5; i++) setLED(i, c_off);
+        return;
+      }
     }
 
-    // Display: Liste mit Pfeil auf aktuellem Eintrag
-    // Zeige 4 Einträge, gewählter in der Mitte (Zeile 1 von 0–3)
     pulseLEDs(millis(), c_cyan);
     aalec.display.clear();
     aalec.display.setFont(ArialMT_Plain_10);
     aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
-    aalec.display.drawString(64, 0, "Name waehlen:");
+    aalec.display.drawString(64, 0, "Name eingeben (5)");
     aalec.display.drawLine(0, 12, 128, 12);
-    aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
 
-    // 4 sichtbare Einträge, zentriert um "selected"
-    int startIdx = selected - 1;
-    for (int row = 0; row < 4; row++) {
-      int idx = startIdx + row;
-      if (idx < 0 || idx >= nameListCount) continue;
-      int y = 14 + row * 12;
-      bool isCurrent = (idx == selected);
-      if (isCurrent) {
-        aalec.display.fillRect(0, y - 1, 128, 12);
-        aalec.display.setColor(BLACK);
-      } else {
-        aalec.display.setColor(WHITE);
-      }
-      String line = (isCurrent ? "> " : "  ") + String(nameList[idx]);
-      aalec.display.drawString(2, y, line);
-      aalec.display.setColor(WHITE);
-    }
+    char preview[6];
+    for (int i = 0; i < 5; i++) preview[i] = charset[idx[i]];
+    preview[5] = '\0';
+
+    aalec.display.setFont(ArialMT_Plain_24);
+    aalec.display.drawString(64, 18, String(preview));
+
+    int cursorX = 64 - 30 + cursor * 15;
+    aalec.display.fillRect(cursorX, 46, 10, 2);
+
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.drawString(64, 52, "Dreh=Zeichen  Taste=Weiter");
     displayShow();
     delay(20);
   }
@@ -575,21 +614,48 @@ void showNameSelect() {
 void showWaiting() {
   int spinFrame = 0;
   unsigned long lastUpdate = 0;
+  unsigned long nameResetHoldStart = 0;
+  bool waitForButtonReleaseAfterReset = false;
 
   while (quizState == STATE_WAITING) {
     checkConnection();
     mqtt.loop();
 
-    // Namensliste eingetroffen und noch kein Name gesetzt → Auswahl zeigen
-    if (nameListReceived && strlen(playerName) == 0) {
+    // Kein Name gesetzt -> lokale Namenseingabe anzeigen
+    if (strlen(playerName) == 0) {
       showNameSelect();
+      nameResetRequested = false;
       continue;
     }
 
-    // Knopfdruck im Warte-Screen → Namensliste erneut zeigen (falls vorhanden)
-    if (nameListReceived && aalec.button_changed() && aalec.get_button() == 1) {
+    if (nameResetRequested && strlen(playerName) == 0) {
       showNameSelect();
+      nameResetRequested = false;
       continue;
+    }
+
+    // Optionaler Reset: Button 3s halten, dann Namenswahl erneut starten.
+    if (strlen(playerName) > 0) {
+      if (waitForButtonReleaseAfterReset) {
+        if (aalec.get_button() == 0) {
+          waitForButtonReleaseAfterReset = false;
+        }
+      } else if (aalec.get_button() == 1) {
+        unsigned long now = millis();
+        if (nameResetHoldStart == 0) {
+          nameResetHoldStart = now;
+        } else if (now - nameResetHoldStart >= NAME_RESET_HOLD_MS) {
+          Serial.println("[NAME] Reset per Long-Press");
+          clearNameInEEPROM();
+          waitForButtonReleaseAfterReset = true;
+          nameResetHoldStart = 0;
+          showNameSelect();
+          nameResetRequested = false;
+          continue;
+        }
+      } else {
+        nameResetHoldStart = 0;
+      }
     }
 
     unsigned long now = millis();
@@ -615,6 +681,10 @@ void showWaiting() {
     if (strlen(playerName) > 0) {
       aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
       aalec.display.drawString(122, 54, String(playerName));
+
+      // Hinweis: bewusster Reset-Trigger statt dauerndem Wiederanzeigen.
+      aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+      aalec.display.drawString(64, 44, "Taste 3s: Name neu");
     }
     displayShow();
   }

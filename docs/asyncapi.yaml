@@ -47,6 +47,27 @@ channels:
       scoresMessage:
         $ref: "#/components/messages/Scores"
 
+  quiz/namelist/set:
+    address: quiz/namelist/set
+    description: Name list submitted by frontend to the Game Master.
+    messages:
+      nameListSetMessage:
+        $ref: "#/components/messages/NameListSet"
+
+  quiz/namelist:
+    address: quiz/namelist
+    description: Name list relayed by Game Master to all devices (retained).
+    messages:
+      nameListMessage:
+        $ref: "#/components/messages/NameList"
+
+  quiz/name/reset:
+    address: quiz/name/reset
+    description: Non-retained command to clear device-side stored player names.
+    messages:
+      nameResetMessage:
+        $ref: "#/components/messages/NameReset"
+
   quiz/answer/{deviceId}:
     address: "quiz/answer/{deviceId}"
     description: Answer submission from a single AALeC device.
@@ -105,6 +126,18 @@ operations:
       $ref: "#/channels/quiz~1scores"
     summary: Game Master publishes current scoreboard
 
+  publishNameListToDevices:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1namelist"
+    summary: Game Master relays selected names to devices
+
+  publishNameResetToDevices:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1name~1reset"
+    summary: Game Master requests device-side name reset
+
   # AALeC device → publishes
   submitAnswer:
     action: send
@@ -117,6 +150,12 @@ operations:
     channel:
       $ref: "#/channels/quiz~1connect~1{deviceId}"
     summary: AALeC device registers itself on boot
+
+  sendNameListFromFrontend:
+    action: send
+    channel:
+      $ref: "#/channels/quiz~1namelist~1set"
+    summary: Frontend sends editable player names to Game Master
 
   # Game Master → subscribes
   receiveAnswer:
@@ -136,6 +175,18 @@ operations:
     channel:
       $ref: "#/channels/quiz~1disconnect~1{deviceId}"
     summary: Game Master handles device disconnects (LWT)
+
+  receiveNameListFromFrontend:
+    action: receive
+    channel:
+      $ref: "#/channels/quiz~1namelist~1set"
+    summary: Game Master receives the name list draft from frontend
+
+  receiveNameListOnDevice:
+    action: receive
+    channel:
+      $ref: "#/channels/quiz~1namelist"
+    summary: AALeC device receives relayed name list
 
 components:
   messages:
@@ -180,6 +231,24 @@ components:
       summary: LWT payload (empty — topic presence signals disconnect)
       payload:
         type: object
+
+    NameListSet:
+      name: NameListSet
+      summary: Name list submitted by frontend
+      payload:
+        $ref: "#/components/schemas/NameListPayload"
+
+    NameList:
+      name: NameList
+      summary: Name list relayed to devices
+      payload:
+        $ref: "#/components/schemas/NameListPayload"
+
+    NameReset:
+      name: NameReset
+      summary: Trigger for clearing local device names
+      payload:
+        $ref: "#/components/schemas/NameResetPayload"
 
   schemas:
     GameStatePayload:
@@ -310,3 +379,31 @@ components:
       example:
         device_id: aAlec-3a2f1c
         name: aAlec-3a2f1c
+
+    NameListPayload:
+      type: object
+      required: [names]
+      properties:
+        names:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 15
+      example:
+        names: [flo, lisa, bro]
+
+    NameResetPayload:
+      type: object
+      required: [reset]
+      properties:
+        reset:
+          type: boolean
+          example: true
+        source:
+          type: string
+          example: beamer
+      example:
+        reset: true
+        source: beamer

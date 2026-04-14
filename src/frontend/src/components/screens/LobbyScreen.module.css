@@ -1,0 +1,93 @@
+.playerList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 260px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.playerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: opacity 0.3s;
+  animation: popIn 0.25s ease;
+}
+
+.playerRow.offline {
+  opacity: 0.4;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #6e7681;
+}
+
+.online .dot {
+  background: #3fb950;
+  box-shadow: 0 0 6px #3fb950aa;
+}
+
+.playerName {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.offline .playerName {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.hint {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.hint strong {
+  color: var(--text);
+}
+
+.startBtn {
+  padding: 0.85rem 3rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  background: #238636;
+  color: #fff;
+  letter-spacing: 0.05em;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.startBtn:hover:not(:disabled) {
+  background: #2ea043;
+  transform: scale(1.03);
+}
+
+.startBtn:disabled {
+  background: #21262d;
+  color: #6e7681;
+  cursor: not-allowed;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}

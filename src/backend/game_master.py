@@ -26,31 +26,37 @@ T_STATE        = "quiz/state"
 T_QUESTION     = "quiz/question"
 T_REVEAL       = "quiz/reveal"
 T_SCORES       = "quiz/scores"
+T_PLAYERS      = "quiz/players"       # lobby player list (online/offline)
+T_ACK          = "quiz/ack"           # registration confirmed → quiz/ack/<device_id>
 T_ANSWER_COUNT = "quiz/answer_count"  # live counter for beamer
 T_ANSWER       = "quiz/answer/#"      # subscribe pattern
 T_CONNECT      = "quiz/connect/#"     # subscribe pattern
 T_DISCONNECT   = "quiz/disconnect/#"  # subscribe pattern (LWT)
+T_CONTROL      = "quiz/control"       # start command from frontend
+
+MIN_PLAYERS = 1
 
 # ── Scoring constants ─────────────────────────────────────────────────────────
-BASE_SCORE          = 1000
-TIME_BONUS          = 500
+BASE_SCORE           = 1000
+TIME_BONUS           = 500
 STREAK_BONUS_PER_LVL = 200   # extra points per consecutive correct answer
-MAX_STREAK_LEVELS   = 3      # cap at level 3 → max +600
+MAX_STREAK_LEVELS    = 3      # cap at level 3 → max +600
 
 
 @dataclass
 class Player:
     device_id: str
     name: str
-    score: int = 0
-    streak: int = 0   # consecutive correct answers
+    score: int   = 0
+    streak: int  = 0
+    online: bool = True
 
 
 @dataclass
 class GameState:
     state: str = "WAITING"
     question_index: int = 0
-    question_id: int = 0          # monotonic, survives restarts in theory
+    question_id: int = 0
     question_start: float = 0.0
     answers: dict = field(default_factory=dict)  # device_id → answer payload
 
@@ -63,6 +69,7 @@ class GameMaster:
         self.players: dict[str, Player] = {}
         self.gs        = GameState()
         self._timer: Optional[threading.Timer] = None
+        self._lock     = threading.Lock()
 
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.client.on_connect    = self._on_connect
@@ -80,7 +87,9 @@ class GameMaster:
         client.subscribe(T_ANSWER)
         client.subscribe(T_CONNECT)
         client.subscribe(T_DISCONNECT)
+        client.subscribe(T_CONTROL)
         self._publish_state()
+        self._publish_players()
 
     def _on_disconnect(self, client, userdata, flags, reason_code, properties):
         print(f"[broker] disconnected (rc={reason_code}), reconnecting …")
@@ -100,22 +109,48 @@ class GameMaster:
             self._handle_disconnect(topic)
         elif topic.startswith("quiz/answer/"):
             self._handle_answer(topic, data)
+        elif topic == T_CONTROL:
+            self._handle_control(data)
 
     # ── Device lifecycle ──────────────────────────────────────────────────────
 
     def _handle_connect(self, topic: str, data: dict):
         device_id = topic.split("/")[-1]
         name      = data.get("name", device_id)
-        if self.gs.state == "WAITING":
-            self.players[device_id] = Player(device_id=device_id, name=name)
-            print(f"[register] {device_id} → '{name}'  ({len(self.players)} players)")
-        else:
-            print(f"[register] {device_id} ignored — game already running")
+        with self._lock:
+            if device_id in self.players:
+                self.players[device_id].online = True
+                print(f"[reconnect] {device_id} is back  ({self._online_count()} online)")
+            elif self.gs.state == "WAITING":
+                self.players[device_id] = Player(device_id=device_id, name=name)
+                print(f"[register] {device_id} → '{name}'  ({self._online_count()} online)")
+                self._publish(f"{T_ACK}/{device_id}", {"status": "registered", "name": name})
+            else:
+                print(f"[register] {device_id} ignored — game already running")
+        self._publish_players()
 
     def _handle_disconnect(self, topic: str):
         device_id = topic.split("/")[-1]
-        if device_id in self.players:
-            print(f"[disconnect] {device_id} left")
+        with self._lock:
+            if device_id in self.players:
+                self.players[device_id].online = False
+                print(f"[disconnect] {device_id} offline  ({self._online_count()} online)")
+        self._publish_players()
+
+    def _online_count(self) -> int:
+        """Must be called with self._lock held."""
+        return sum(1 for p in self.players.values() if p.online)
+
+    # ── Control (frontend start button) ──────────────────────────────────────
+
+    def _handle_control(self, data: dict):
+        action = data.get("action")
+        if action == "start":
+            print("[control] start requested via MQTT")
+            self.start_game()
+        elif action == "restart":
+            print("[control] restart requested via MQTT")
+            self.restart_game()
 
     # ── Answer handling ───────────────────────────────────────────────────────
 
@@ -134,21 +169,30 @@ class GameMaster:
 
         self.gs.answers[device_id] = {"answer": answer, "elapsed_ms": elapsed_ms}
         print(f"[answer] {device_id}: {answer}  ({elapsed_ms} ms)")
+        with self._lock:
+            total = len(self.players)
         self._publish(T_ANSWER_COUNT, {
             "question_id": self.gs.question_id,
             "count":       len(self.gs.answers),
-            "total":       len(self.players),
+            "total":       total,
         })
 
     # ── State machine ─────────────────────────────────────────────────────────
 
     def _publish_state(self, remaining_s: int = 0):
-        payload = {
+        self._publish(T_STATE, {
             "state":       self.gs.state,
             "question_id": self.gs.question_id,
             "remaining_s": remaining_s,
-        }
-        self._publish(T_STATE, payload)
+        }, retain=True)
+
+    def _publish_players(self):
+        with self._lock:
+            players = [
+                {"device_id": p.device_id, "name": p.name, "online": p.online}
+                for p in self.players.values()
+            ]
+        self._publish(T_PLAYERS, {"players": players, "min_players": MIN_PLAYERS}, retain=True)
 
     def _publish(self, topic: str, payload: dict, retain: bool = False):
         self.client.publish(topic, json.dumps(payload), retain=retain)
@@ -158,10 +202,12 @@ class GameMaster:
         if self.gs.state != "WAITING":
             print("[game] already running")
             return
-        if not self.players:
-            print("[game] no players registered, aborting")
+        with self._lock:
+            online = self._online_count()
+        if online < MIN_PLAYERS:
+            print(f"[game] only {online} player(s) online, need {MIN_PLAYERS}")
             return
-        print(f"[game] starting with {len(self.players)} players")
+        print(f"[game] starting with {online} online players")
         self.gs.question_index = 0
         self._transition_to_question()
 
@@ -176,15 +222,12 @@ class GameMaster:
         self.gs.question_start = time.monotonic()
         self.gs.answers        = {}
 
-        payload = {
+        self._publish(T_QUESTION, {
             "id":           self.gs.question_id,
             "text":         q["text"],
             "options":      q["options"],
             "time_limit_s": q["time_limit_s"],
-        }
-        self._publish(T_QUESTION, payload)
-
-        # Brief display period before voting opens
+        })
         self._publish_state(remaining_s=q["time_limit_s"])
         print(f"[question {self.gs.question_id}] {q['text']}")
 
@@ -202,19 +245,18 @@ class GameMaster:
         q       = self.questions[self.gs.question_index]
         correct = q["correct"].upper()
 
-        # Count answers per option
         counts: dict[str, int] = {k: 0 for k in q["options"]}
-        for device_id, ans in self.gs.answers.items():
-            option = ans["answer"]
-            if option in counts:
-                counts[option] += 1
+        for ans in self.gs.answers.values():
+            if ans["answer"] in counts:
+                counts[ans["answer"]] += 1
 
-        # Score players
         time_limit_ms = q["time_limit_s"] * 1000
+        with self._lock:
+            players_snapshot = dict(self.players)
         for device_id, ans in self.gs.answers.items():
-            if device_id not in self.players:
+            if device_id not in players_snapshot:
                 continue
-            player = self.players[device_id]
+            player = players_snapshot[device_id]
             if ans["answer"] == correct:
                 player.streak += 1
                 elapsed      = min(ans["elapsed_ms"], time_limit_ms)
@@ -227,8 +269,7 @@ class GameMaster:
             else:
                 player.streak = 0
 
-        # Players who didn't answer at all lose their streak
-        for device_id, player in self.players.items():
+        for device_id, player in players_snapshot.items():
             if device_id not in self.gs.answers:
                 player.streak = 0
 
@@ -244,12 +285,13 @@ class GameMaster:
 
     def _transition_to_scores(self):
         self.gs.state = "SCORES"
-        scoreboard = sorted(
-            [{"device_id": p.device_id, "name": p.name, "score": p.score, "streak": p.streak}
-             for p in self.players.values()],
-            key=lambda x: x["score"],
-            reverse=True,
-        )
+        with self._lock:
+            scoreboard = sorted(
+                [{"device_id": p.device_id, "name": p.name, "score": p.score, "streak": p.streak}
+                 for p in self.players.values()],
+                key=lambda x: x["score"],
+                reverse=True,
+            )
         self._publish(T_SCORES, {"scores": scoreboard})
         self._publish_state()
         print(f"[scores] {scoreboard}")
@@ -265,6 +307,23 @@ class GameMaster:
         self._publish_state()
         print("[game] ended")
 
+    def restart_game(self):
+        """Reset scores and state back to WAITING so a new game can start."""
+        if self.gs.state not in ("ENDED", "WAITING"):
+            print(f"[game] restart ignored — state is {self.gs.state}")
+            return
+        if self._timer:
+            self._timer.cancel()
+            self._timer = None
+        with self._lock:
+            for p in self.players.values():
+                p.score  = 0
+                p.streak = 0
+        self.gs = GameState()  # fresh state, question_index=0, question_id=0
+        print("[game] restarted — back to WAITING")
+        self._publish_state()
+        self._publish_players()
+
     # ── Timer helpers ─────────────────────────────────────────────────────────
 
     def _set_timer(self, seconds: float, callback):
@@ -276,33 +335,22 @@ class GameMaster:
 
     # ── Run ───────────────────────────────────────────────────────────────────
 
-    def run(self, auto_start: bool = False):
+    def run(self):
         self.client.connect(self.broker, self.port, keepalive=60)
         self.client.loop_start()
 
         print("AALeC Quiz — Game Master")
-        print(f"  Broker : {self.broker}:{self.port}")
+        print(f"  Broker   : {self.broker}:{self.port}")
         print(f"  Questions: {len(self.questions)}")
+        print(f"  Min players to start: {MIN_PLAYERS}")
+        print("Start the game via the beamer lobby UI or publish to quiz/control.")
+        print("Press Ctrl+C to quit.")
 
-        if auto_start:
-            print("  Mode   : auto-start (non-interactive)")
-            print("[game] waiting for players to register …")
-            try:
-                while True:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                pass
-        else:
-            print("Commands: [s] start game   [q] quit")
-            try:
-                while True:
-                    cmd = input("> ").strip().lower()
-                    if cmd == "s":
-                        self.start_game()
-                    elif cmd == "q":
-                        break
-            except (KeyboardInterrupt, EOFError):
-                pass
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
 
         if self._timer:
             self._timer.cancel()
@@ -315,18 +363,15 @@ class GameMaster:
 
 def main():
     parser = argparse.ArgumentParser(description="AALeC Quiz Game Master")
-    parser.add_argument("--broker",     default="localhost",      help="MQTT broker host")
-    parser.add_argument("--port",       default=1883, type=int,   help="MQTT broker port")
-    parser.add_argument("--questions",  default="questions.json", help="Path to questions JSON")
-    parser.add_argument("--auto-start", action="store_true",      help="Non-interactive mode (for Docker)")
+    parser.add_argument("--broker",    default="localhost",      help="MQTT broker host")
+    parser.add_argument("--port",      default=1883, type=int,   help="MQTT broker port")
+    parser.add_argument("--questions", default="questions.json", help="Path to questions JSON")
     args = parser.parse_args()
 
     with open(args.questions, encoding="utf-8") as f:
         questions = json.load(f)
 
-    GameMaster(broker=args.broker, port=args.port, questions=questions).run(
-        auto_start=args.auto_start
-    )
+    GameMaster(broker=args.broker, port=args.port, questions=questions).run()
 
 
 if __name__ == "__main__":

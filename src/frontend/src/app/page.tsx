@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { useMqtt } from "@/hooks/useMqtt";
-import type { ScoreEntry } from "@/types/quiz";
 
 import WaitingScreen  from "@/components/screens/WaitingScreen";
 import QuestionScreen from "@/components/screens/QuestionScreen";
@@ -11,49 +10,64 @@ import ScoresScreen   from "@/components/screens/ScoresScreen";
 import styles from "@/components/screens/screens.module.css";
 
 export default function BeamerPage() {
-  const { connected, gameState, question, reveal, scores, answerCount } = useMqtt();
+  const { connected, gameState, question, reveal, scores, answerCount, players, publish } = useMqtt();
 
-  // Keep track of registered players from scores payloads
-  const playersRef = useRef<ScoreEntry[]>([]);
-  if (scores) playersRef.current = scores.scores;
+  const lobbyPlayers  = players?.players    ?? [];
+  const minPlayers    = players?.min_players ?? 2;
+  const currentState  = gameState?.state     ?? "WAITING";
+
+  const handleStart = useCallback(() => {
+    publish("quiz/control", { action: "start" });
+  }, [publish]);
+
+  const handleRestart = useCallback(() => {
+    publish("quiz/control", { action: "restart" });
+  }, [publish]);
+
+  const waitingScreen = (
+    <WaitingScreen
+      players={lobbyPlayers}
+      minPlayers={minPlayers}
+      gameState={currentState}
+      onStart={handleStart}
+    />
+  );
 
   const screen = useMemo(() => {
-    const state = gameState?.state ?? "WAITING";
-
-    switch (state) {
+    switch (currentState) {
       case "WAITING":
-        return <WaitingScreen players={playersRef.current} />;
+        return waitingScreen;
 
       case "QUESTION":
         return question
           ? <QuestionScreen question={question} remainingS={gameState?.remaining_s ?? 0} voting={false} answerCount={null} />
-          : <WaitingScreen players={playersRef.current} />;
+          : waitingScreen;
 
       case "VOTING":
         return question
           ? <QuestionScreen question={question} remainingS={gameState?.remaining_s ?? 0} voting={true} answerCount={answerCount} />
-          : <WaitingScreen players={playersRef.current} />;
+          : waitingScreen;
 
       case "REVEAL":
         return question && reveal
           ? <RevealScreen question={question} reveal={reveal} />
-          : <WaitingScreen players={playersRef.current} />;
+          : waitingScreen;
 
       case "SCORES":
         return scores
           ? <ScoresScreen scores={scores.scores} />
-          : <WaitingScreen players={playersRef.current} />;
+          : waitingScreen;
 
       case "ENDED":
         return scores
-          ? <ScoresScreen scores={scores.scores} ended />
-          : <WaitingScreen players={playersRef.current} />;
+          ? <ScoresScreen scores={scores.scores} ended onRestart={handleRestart} />
+          : waitingScreen;
 
       default:
-        return <WaitingScreen players={playersRef.current} />;
+        return waitingScreen;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState, question, reveal, scores, answerCount]);
+  }, [currentState, question, reveal, scores, answerCount, lobbyPlayers, minPlayers]);
 
   return (
     <>

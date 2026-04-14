@@ -288,6 +288,26 @@
   color: var(--accent);
 }
 
+/* ── Restart button ─────────────────────────────────────────────────── */
+.restartBtn {
+  margin-top: 1.5rem;
+  padding: 0.85rem 3.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  background: #238636;
+  color: #fff;
+  letter-spacing: 0.05em;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.restartBtn:hover {
+  background: #2ea043;
+  transform: scale(1.03);
+}
+
 /* ── Connection indicator ───────────────────────────────────────────── */
 .connectionDot {
   position: fixed;

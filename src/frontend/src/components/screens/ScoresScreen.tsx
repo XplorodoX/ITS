@@ -8,9 +8,10 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 interface Props {
   scores: ScoreEntry[];
   ended?: boolean;
+  onRestart?: () => void;
 }
 
-export default function ScoresScreen({ scores, ended = false }: Props) {
+export default function ScoresScreen({ scores, ended = false, onRestart }: Props) {
   const maxScore = scores[0]?.score || 1;
 
   return (
@@ -44,6 +45,12 @@ export default function ScoresScreen({ scores, ended = false }: Props) {
           </div>
         ))}
       </div>
+
+      {ended && onRestart && (
+        <button className={styles.restartBtn} onClick={onRestart}>
+          Neu starten
+        </button>
+      )}
     </div>
   );
 }

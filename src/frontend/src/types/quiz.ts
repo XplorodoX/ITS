@@ -41,3 +41,14 @@ export interface AnswerCount {
 export interface Scores {
   scores: ScoreEntry[];
 }
+
+export interface LobbyPlayer {
+  device_id: string;
+  name: string;
+  online: boolean;
+}
+
+export interface Players {
+  players: LobbyPlayer[];
+  min_players: number;
+}

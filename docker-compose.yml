@@ -27,5 +27,4 @@ services:
       - "${BROKER:-mosquitto}"
       - "--questions"
       - "${QUESTIONS:-questions.json}"
-      - "--auto-start"
     restart: unless-stopped

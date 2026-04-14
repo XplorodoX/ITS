@@ -597,11 +597,26 @@ void showVoted() {
   int spinFrame = 0;
   unsigned long lastUpdate = 0;
 
-  for (int i = 0; i < 5; i++) setLED(i,c_cyan);
-
   while (quizState == STATE_VOTED) {
     checkConnection();
     mqtt.loop();
+
+    // Countdown-LEDs laufen weiter, auch wenn schon abgestimmt wurde.
+    {
+      unsigned long elapsed = millis() - votingStartMs;
+      unsigned long limitMs = (unsigned long)timeLimitS * 1000UL;
+      if (elapsed > limitMs) elapsed = limitMs;
+      int ledsOn = (int)(((limitMs - elapsed) * 5UL + limitMs - 1) / limitMs);
+      float pct  = (float)(limitMs - elapsed) / limitMs;
+      for (int i = 0; i < 5; i++) {
+        if (i < ledsOn) {
+          RgbColor col = (pct > 0.6f) ? c_green : (pct > 0.4f) ? c_yellow : c_red;
+          setLED(i, col);
+        } else {
+          setLED(i, c_off);
+        }
+      }
+    }
 
     unsigned long now = millis();
     if (now - lastUpdate < 80) { delay(10); continue; }
@@ -617,7 +632,17 @@ void showVoted() {
     // Gewählte Antwort groß anzeigen
     aalec.display.setFont(ArialMT_Plain_16);
     String chosen = "Antwort: ";
-    chosen += (char)('A' + selectedAnswer);
+    if (questionType == QTYPE_HIGHER_LOWER) {
+      chosen += (selectedAnswer == 0) ? "Hoeher" : "Niedriger";
+    } else if (questionType == QTYPE_ESTIMATE) {
+      chosen += String(estimateValue);
+      if (strlen(estimateUnit) > 0) {
+        chosen += " ";
+        chosen += estimateUnit;
+      }
+    } else {
+      chosen += (char)('A' + selectedAnswer);
+    }
     aalec.display.drawString(64, 16, chosen);
 
     aalec.display.setFont(ArialMT_Plain_10);

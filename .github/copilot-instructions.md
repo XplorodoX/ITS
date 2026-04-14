@@ -370,34 +370,6 @@ never commit secrets.
 - Only add runtime test jobs (Python, Arduino, frontend) when the respective
   code actually exists.
 
----
-
-## AI Diary
-
-Every AI-assisted contribution is documented in `diary/<branch>/NNN-title.md`.
-
-```markdown
-# NNN — Short Title
-
-**Date**: YYYY-MM-DD
-**Tool**: [Claude / Copilot / Cursor / ...]
-**Model**: [model name, e.g., GPT-5.3-Codex]
-**Iterations**: [number of follow-up prompts]
-
-## Prompt
-
-**YYYY-MM-DD HH:MM**
-
-[Full prompt text.]
-```
-
-Commit convention:
-```
-[diary] NNN — Short description of what was prompted
-```
-
-Every AI-assisted code change **must** have a corresponding diary entry
-committed alongside it.
 
 ---
 

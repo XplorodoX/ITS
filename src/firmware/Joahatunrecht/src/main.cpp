@@ -39,10 +39,12 @@ int  selectedAnswer     = 0;   // 0=A … 3=D
 int  estimateMin   = 0;
 int  estimateMax   = 100;
 int  estimateValue = 50;   // current rotary position
+int  estimateCorrectValue = 0;
 char estimateUnit[16] = "";
 
 // ── Higher / Lower ────────────────────────────────────────────────────────────
 int  hlReference = 0;
+bool hlCorrectHigher = true;
 char hlUnit[16]  = "";
 // selectedAnswer reused: 0 = HÖHER, 1 = NIEDRIGER
 
@@ -146,6 +148,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     if (strcmp(revType, "estimate") == 0) {
       int correct = doc["correct"] | 0;
+      estimateCorrectValue = correct;
       int delta   = abs(estimateValue - correct);
       int rng     = max(estimateMax - estimateMin, 1);
       float relErr = (float)delta / rng;
@@ -158,6 +161,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       correctStr.toUpperCase();
       bool guessedHigher = (selectedAnswer == 0);
       bool correctHigher = (correctStr == "HIGHER");
+      hlCorrectHigher    = correctHigher;
       revealWasCorrect   = (guessedHigher == correctHigher);
       answerCounts[0]    = doc["counts"]["HIGHER"] | 0;
       answerCounts[1]    = doc["counts"]["LOWER"]  | 0;
@@ -179,11 +183,21 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 bool mqttReconnect() {
   if (mqtt.connected()) return true;
-  Serial.print("[MQTT] Verbinde mit Broker ");
-  Serial.print(MQTT_BROKER);
-  Serial.print(":");
-  Serial.print(MQTT_PORT);
-  Serial.print(" als '");
+
+  // mDNS-Auflösung: Hostname → IP (z.B. "MacBook-Pro-von-Florian.local")
+  IPAddress brokerIP;
+  Serial.print("[MQTT] Löse Broker-Hostname auf: ");
+  Serial.println(MQTT_BROKER);
+  if (!WiFi.hostByName(MQTT_BROKER, brokerIP)) {
+    Serial.println("[MQTT] Hostname nicht auflösbar — Verbindung abgebrochen");
+    return false;
+  }
+  Serial.print("[MQTT] Broker-IP: ");
+  Serial.println(brokerIP.toString());
+  mqtt.setServer(brokerIP, MQTT_PORT);
+  mqtt.setBufferSize(512);
+
+  Serial.print("[MQTT] Verbinde als '");
   Serial.print(deviceId);
   Serial.println("' ...");
   String willTopic = "quiz/disconnect/" + deviceId;
@@ -621,11 +635,6 @@ void showReveal() {
   for (int i = 0; i < 5; i++)
     setLED(i,correct ? c_green : c_red);
 
-  // Gesamtanzahl für Prozentberechnung
-  int total = 0;
-  for (int i = 0; i < 4; i++) total += answerCounts[i];
-  if (total == 0) total = 1;
-
   while (quizState == STATE_REVEAL) {
     checkConnection();
     mqtt.loop();
@@ -637,30 +646,86 @@ void showReveal() {
     aalec.display.drawString(64, 0, correct ? "RICHTIG!" : "FALSCH!");
     aalec.display.drawLine(0, 11, 128, 11);
 
-    // Balkendiagramm für A/B/C/D
-    const char labels[4] = {'A','B','C','D'};
-    for (int i = 0; i < 4; i++) {
-      int y   = 13 + i * 12;
-      int pct = (answerCounts[i] * 100) / total;
-      int bar = map(pct, 0, 100, 0, 90);
+    if (questionType == QTYPE_ESTIMATE) {
+      int delta = abs(estimateValue - estimateCorrectValue);
+      String unit = strlen(estimateUnit) > 0 ? String(" ") + estimateUnit : "";
 
-      // Label
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.drawString(64, 14, "Tipp: " + String(estimateValue) + unit);
+      aalec.display.drawString(64, 27, "Korrekt: " + String(estimateCorrectValue) + unit);
+      aalec.display.drawString(64, 40, "Abweichung: " + String(delta) + unit);
+      aalec.display.drawString(64, 52, correct ? "Im Toleranzbereich" : "Zu weit daneben");
+
+    } else if (questionType == QTYPE_HIGHER_LOWER) {
+      int total = answerCounts[0] + answerCounts[1];
+      if (total == 0) total = 1;
+
+      const char* labels[2] = {"Hoeher", "Niedriger"};
+      int correctIdx = hlCorrectHigher ? 0 : 1;
+
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.drawString(64, 12, String("Korrekt: ") + labels[correctIdx]);
+
+      for (int i = 0; i < 2; i++) {
+        int y   = 22 + i * 14;
+        int pct = (answerCounts[i] * 100) / total;
+        int bar = map(pct, 0, 100, 0, 66);
+
+        aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
+        aalec.display.drawString(0, y, i == 0 ? "H" : "N");
+
+        if (i == correctIdx) {
+          aalec.display.fillRect(11, y + 1, bar, 10);
+          aalec.display.setColor(BLACK);
+          if (bar > 18) aalec.display.drawString(13, y, String(pct) + "%");
+          aalec.display.setColor(WHITE);
+          if (bar <= 18) aalec.display.drawString(80, y, String(pct) + "%");
+        } else {
+          aalec.display.drawRect(11, y + 1, 66, 10);
+          aalec.display.fillRect(11, y + 1, bar, 10);
+          aalec.display.setColor(BLACK);
+          if (bar > 18) aalec.display.drawString(13, y, String(pct) + "%");
+          aalec.display.setColor(WHITE);
+          if (bar <= 18) aalec.display.drawString(80, y, String(pct) + "%");
+        }
+      }
+
       aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
-      aalec.display.drawString(0, y, String(labels[i]));
+      aalec.display.drawString(0, 50, String("Du: ") + (selectedAnswer == 0 ? "Hoeher" : "Niedriger"));
+      aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
+      aalec.display.drawString(128, 50, String("Geg.: ") + labels[correctIdx]);
+      aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
 
-      // Balken — korrekter Balken invertiert
-      if (i == (correctAnswer - 'A')) {
-        aalec.display.fillRect(12, y + 1, bar, 10);
-        aalec.display.setColor(BLACK);
-        aalec.display.drawString(14, y, String(pct) + "%");
-        aalec.display.setColor(WHITE);
-      } else {
-        aalec.display.drawRect(12, y + 1, 90, 10);
-        aalec.display.fillRect(12, y + 1, bar, 10);
-        aalec.display.setColor(BLACK);
-        if (bar > 20) aalec.display.drawString(14, y, String(pct) + "%");
-        aalec.display.setColor(WHITE);
-        if (bar <= 20) aalec.display.drawString(104, y, String(pct) + "%");
+    } else {
+      // MCQ-Reveal mit A/B/C/D-Balkendiagramm
+      int total = 0;
+      for (int i = 0; i < 4; i++) total += answerCounts[i];
+      if (total == 0) total = 1;
+
+      const char labels[4] = {'A','B','C','D'};
+      for (int i = 0; i < 4; i++) {
+        int y   = 13 + i * 12;
+        int pct = (answerCounts[i] * 100) / total;
+        int bar = map(pct, 0, 100, 0, 90);
+
+        // Label
+        aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
+        aalec.display.drawString(0, y, String(labels[i]));
+
+        // Balken — korrekter Balken invertiert
+        if (i == (correctAnswer - 'A')) {
+          aalec.display.fillRect(12, y + 1, bar, 10);
+          aalec.display.setColor(BLACK);
+          aalec.display.drawString(14, y, String(pct) + "%");
+          aalec.display.setColor(WHITE);
+        } else {
+          aalec.display.drawRect(12, y + 1, 90, 10);
+          aalec.display.fillRect(12, y + 1, bar, 10);
+          aalec.display.setColor(BLACK);
+          if (bar > 20) aalec.display.drawString(14, y, String(pct) + "%");
+          aalec.display.setColor(WHITE);
+          if (bar <= 20) aalec.display.drawString(104, y, String(pct) + "%");
+        }
       }
     }
 
@@ -742,7 +807,6 @@ bool handleConnectionLoss() {
       Serial.print("[WiFi] Reconnect erfolgreich! IP: ");
       Serial.println(WiFi.localIP());
 
-      mqtt.setServer(MQTT_BROKER, MQTT_PORT);
       mqtt.setCallback(mqttCallback);
       mqttReconnect();
 
@@ -878,8 +942,6 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     // MQTT einrichten
-    mqtt.setServer(MQTT_BROKER, MQTT_PORT);
-    mqtt.setBufferSize(512);
     mqtt.setCallback(mqttCallback);
     mqttReconnect();
 

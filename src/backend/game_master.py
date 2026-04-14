@@ -179,12 +179,17 @@ class GameMaster:
         self.gs.answers[device_id] = {"answer": answer, "elapsed_ms": elapsed_ms}
         print(f"[answer] {device_id}: {answer}  ({elapsed_ms} ms)")
         with self._lock:
-            total = len(self.players)
+            total = self._online_count()
         self._publish(T_ANSWER_COUNT, {
             "question_id": self.gs.question_id,
             "count":       len(self.gs.answers),
             "total":       total,
         })
+
+        # Wenn alle aktuell online Spieler geantwortet haben, Reveal sofort zeigen.
+        if total > 0 and len(self.gs.answers) >= total:
+            print("[voting] all online players answered -> reveal now")
+            self._finish_voting_early()
 
     # ── State machine ─────────────────────────────────────────────────────────
 
@@ -261,7 +266,17 @@ class GameMaster:
         print(f"[voting] open for {q['time_limit_s']}s")
         self._set_timer(q["time_limit_s"], self._transition_to_reveal)
 
+    def _finish_voting_early(self):
+        if self.gs.state != "VOTING":
+            return
+        if self._timer:
+            self._timer.cancel()
+            self._timer = None
+        self._transition_to_reveal()
+
     def _transition_to_reveal(self):
+        if self.gs.state != "VOTING":
+            return
         q            = self.questions[self.gs.question_index]
         q_type       = q.get("type", "mcq")
         time_limit_ms = q["time_limit_s"] * 1000

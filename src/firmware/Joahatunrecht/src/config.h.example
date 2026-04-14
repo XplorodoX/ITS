@@ -4,6 +4,7 @@
 #define WIFI_SSID     "AALeC-Quiz"
 #define WIFI_PASSWORD "12345678"
 
-// MQTT-Broker
-#define MQTT_BROKER   "192.168.4.1"   // IP des Brokers im Netzwerk
+// MQTT-Broker — Hostname (mDNS) statt IP empfohlen, dann ist die IP egal
+// Hostname des Broker-PCs: Terminal → "scutil --get LocalHostName" → + ".local"
+#define MQTT_BROKER   "dein-pc-name.local"
 #define MQTT_PORT     1883

@@ -42,9 +42,19 @@ int  selectedAnswer     = 0;   // 0=A … 3=D
 // ── Estimate ──────────────────────────────────────────────────────────────────
 int  estimateMin   = 0;
 int  estimateMax   = 100;
-int  estimateValue = 50;   // current rotary position
+int  estimateValue = 50;   // current value from analog potentiometer (A0)
 int  estimateCorrectValue = 0;
 char estimateUnit[16] = "";
+
+// ── Poti Target ───────────────────────────────────────────────────────────────
+int  potiTarget    = 50;   // Zielwert in Prozent (0–100)
+int  potiGuess     = 50;   // abgeschickter Poti-Wert
+int  potiTolerance = 5;    // ±% Toleranz für "richtig"
+
+// ── Temp Target ───────────────────────────────────────────────────────────────
+float tempTarget    = 25.0f;  // Zieltemperatur in °C
+float tempGuess     = 0.0f;   // abgeschickte Temperatur
+float tempTolerance = 1.5f;   // ±°C Toleranz für "richtig"
 
 // ── Higher / Lower ────────────────────────────────────────────────────────────
 int  hlReference = 0;
@@ -53,7 +63,7 @@ char hlUnit[16]  = "";
 // selectedAnswer reused: 0 = HÖHER, 1 = NIEDRIGER
 
 // ── Common ───────────────────────────────────────────────────────────────────
-enum QuestionType { QTYPE_MCQ, QTYPE_ESTIMATE, QTYPE_HIGHER_LOWER };
+enum QuestionType { QTYPE_MCQ, QTYPE_ESTIMATE, QTYPE_HIGHER_LOWER, QTYPE_POTI_TARGET, QTYPE_TEMP_TARGET };
 QuestionType questionType    = QTYPE_MCQ;
 int          currentQuestionId = 0;
 int          timeLimitS        = 20;
@@ -64,6 +74,44 @@ bool         revealWasCorrect  = false;  // set by quiz/reveal handler
 void checkConnection();
 void displayShow();
 void connectMqttAsPlayer();
+
+// ===== SOUND HELPERS =====
+// Spielt eine Melodie blockierend (nur für kurze Sequenzen am Anfang eines Screens)
+void playMelody(const unsigned int* notes, const unsigned int* durs, int len) {
+  for (int i = 0; i < len; i++) {
+    aalec.play(notes[i], durs[i]);
+    delay(durs[i] + 20);  // Note + kurze Pause zwischen Tönen
+  }
+  aalec.play(t_off);
+}
+
+void soundSubmit() {
+  // Kurzer Bestätigungs-Beep beim Abschicken der Antwort
+  aalec.play(t_c_2, 80);
+  delay(100);
+  aalec.play(t_off);
+}
+
+void soundCorrect() {
+  // Aufsteigende Fanfare: C → E → G → C2
+  static const unsigned int notes[] = { t_c_1, t_e_1, t_g_1, t_c_2 };
+  static const unsigned int durs[]  = { 120,   120,   120,   250   };
+  playMelody(notes, durs, 4);
+}
+
+void soundWrong() {
+  // Absteigende Misserfolgs-Melodie: A → D
+  static const unsigned int notes[] = { t_a_1, t_d_1 };
+  static const unsigned int durs[]  = { 200,   350   };
+  playMelody(notes, durs, 2);
+}
+
+void soundWinner() {
+  // Winner-Fanfare: C C G E C2 — G C2
+  static const unsigned int notes[] = { t_c_1, t_c_1, t_g_1, t_e_1, t_c_2, t_g_1, t_c_2 };
+  static const unsigned int durs[]  = { 100,   100,   100,   100,   200,   100,   400   };
+  playMelody(notes, durs, 7);
+}
 
 // ===== MQTT =====
 WiFiClient   wifiClient;
@@ -147,6 +195,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       strncpy(hlUnit, u, 15); hlUnit[15] = '\0';
       selectedAnswer = 0;  // 0=HÖHER, 1=NIEDRIGER
       Serial.printf("[QUESTION/higher_lower] reference=%d unit=%s\n", hlReference, hlUnit);
+    } else if (strcmp(typeStr, "poti_target") == 0) {
+      questionType   = QTYPE_POTI_TARGET;
+      potiTarget     = doc["target"]    | 50;
+      potiTolerance  = doc["tolerance"] | 5;
+      potiGuess      = 50;
+      Serial.printf("[QUESTION/poti_target] target=%d%% tol=%d%%\n", potiTarget, potiTolerance);
+    } else if (strcmp(typeStr, "temp_target") == 0) {
+      questionType   = QTYPE_TEMP_TARGET;
+      tempTarget     = doc["target"]    | 25.0f;
+      tempTolerance  = doc["tolerance"] | 1.5f;
+      tempGuess      = aalec.get_temp();
+      Serial.printf("[QUESTION/temp_target] target=%.1f tol=%.1f\n", tempTarget, tempTolerance);
     } else {
       questionType = QTYPE_MCQ;
       const char* opts[4] = { "A", "B", "C", "D" };
@@ -188,7 +248,21 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   } else if (t == "quiz/reveal") {
     const char* revType = doc["type"] | "mcq";
 
-    if (strcmp(revType, "estimate") == 0) {
+    if (strcmp(revType, "poti_target") == 0) {
+      int correct = doc["correct"] | potiTarget;
+      int delta   = abs(potiGuess - correct);
+      revealWasCorrect = (delta <= potiTolerance);
+      answerCounts[0]  = correct;   // Zielwert zum Anzeigen
+      Serial.printf("[REVEAL/poti_target] correct=%d guess=%d delta=%d\n", correct, potiGuess, delta);
+
+    } else if (strcmp(revType, "temp_target") == 0) {
+      float correct = doc["correct"] | tempTarget;
+      float delta   = fabsf(tempGuess - correct);
+      revealWasCorrect = (delta <= tempTolerance);
+      answerCounts[0]  = (int)round(correct);   // zum Anzeigen
+      Serial.printf("[REVEAL/temp_target] correct=%.1f guess=%.1f delta=%.1f\n", correct, tempGuess, delta);
+
+    } else if (strcmp(revType, "estimate") == 0) {
       int correct = doc["correct"] | 0;
       estimateCorrectValue = correct;
       int delta   = abs(estimateValue - correct);
@@ -417,15 +491,16 @@ void showEstimate() {
     }
 
     // ── Drehknopf ändert Schätzwert ─────────────────────────────────────────
-    if (aalec.rotate_changed()) {
-      int rot = aalec.get_rotate();
-      estimateValue = constrain(estimateValue + rot, estimateMin, estimateMax);
-      aalec.reset_rotate(0);
+    {
+      uint16_t raw = aalec.get_analog();  // 0–1023 vom Poti (A0)
+      estimateValue = estimateMin + (int)((long)raw * (estimateMax - estimateMin) / 1023);
+      estimateValue = constrain(estimateValue, estimateMin, estimateMax);
     }
 
     // ── Button bestätigt ────────────────────────────────────────────────────
     if (aalec.button_changed() && aalec.get_button() == 1) {
       unsigned long elapsedMs = millis() - votingStartMs;
+      soundSubmit();
       quizState = STATE_VOTED;
       JsonDocument ans;
       ans["question_id"] = currentQuestionId;
@@ -488,13 +563,14 @@ void showHigherLower() {
     // ── Drehknopf wechselt HÖHER / NIEDRIGER ────────────────────────────────
     if (aalec.rotate_changed()) {
       int rot = aalec.get_rotate();
-      selectedAnswer = constrain(selectedAnswer + (rot > 0 ? 1 : -1), 0, 1);
+      selectedAnswer = constrain(selectedAnswer + (rot > 0 ? -1 : 1), 0, 1);
       aalec.reset_rotate(0);
     }
 
     // ── Button bestätigt ────────────────────────────────────────────────────
     if (aalec.button_changed() && aalec.get_button() == 1) {
       unsigned long elapsedMs = millis() - votingStartMs;
+      soundSubmit();
       quizState = STATE_VOTED;
       String chosenStr = (selectedAnswer == 0) ? "HIGHER" : "LOWER";
       JsonDocument ans;
@@ -542,6 +618,127 @@ void showHigherLower() {
   }
 }
 
+// ===== POTI-TARGET-SCREEN =====
+void showPotiTarget() {
+  while (quizState == STATE_VOTING) {
+    checkConnection();
+    mqtt.loop();
+
+    // Poti lesen und auf 0–100% mappen
+    uint16_t raw = aalec.get_analog();
+    int potiNow  = (int)((long)raw * 100 / 1023);
+
+    // Button bestätigt
+    if (aalec.button_changed() && aalec.get_button() == 1) {
+      potiGuess = potiNow;
+      soundSubmit();
+      quizState = STATE_VOTED;
+      JsonDocument ans;
+      ans["question_id"] = currentQuestionId;
+      ans["answer"]      = String(potiGuess);
+      ans["elapsed_ms"]  = (int)(millis() - votingStartMs);
+      char buf[128];
+      serializeJson(ans, buf);
+      mqtt.publish(("quiz/answer/" + deviceId).c_str(), buf);
+      Serial.printf("[MQTT] Poti-Target gesendet: %d%%\n", potiGuess);
+    }
+
+    // ── Display ─────────────────────────────────────────────────────────────
+    aalec.display.clear();
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+    aalec.display.drawString(64, 0, "Poti-Challenge");
+    aalec.display.drawLine(0, 13, 128, 13);
+
+    // Ziel gross in der Mitte
+    aalec.display.setFont(ArialMT_Plain_24);
+    aalec.display.drawString(64, 16, "Ziel: " + String(potiTarget) + "%");
+
+    // Aktueller Poti-Wert klein unten
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.drawString(64, 43, "Jetzt: " + String(potiNow) + "%");
+
+    // Fortschrittsbalken (Poti-Position)
+    int barW = map(potiNow, 0, 100, 0, 124);
+    aalec.display.drawRect(2, 54, 124, 8);
+    aalec.display.fillRect(2, 54, barW, 8);
+
+    // Zielmarkierung auf dem Balken
+    int targetX = map(potiTarget, 0, 100, 2, 126);
+    aalec.display.drawLine(targetX, 52, targetX, 64);
+
+    displayShow();
+  }
+}
+
+// ===== TEMP-TARGET-SCREEN =====
+void showTempTarget() {
+  while (quizState == STATE_VOTING) {
+    checkConnection();
+    mqtt.loop();
+
+    float tempNow = aalec.get_temp();
+    float delta   = tempNow - tempTarget;
+
+    // LEDs als Richtungsanzeige: kalt=blau, warm=rot, nah=grün
+    float absDelta = fabsf(delta);
+    for (int i = 0; i < 5; i++) {
+      if      (absDelta <= tempTolerance)  setLED(i, { 0, 255, 0 });   // grün = nah dran
+      else if (delta < 0)                  setLED(i, { 0, 0, 255 });   // blau = zu kalt
+      else                                 setLED(i, { 255, 0, 0 });   // rot = zu warm
+    }
+
+    // Button bestätigt
+    if (aalec.button_changed() && aalec.get_button() == 1) {
+      tempGuess = tempNow;
+      soundSubmit();
+      quizState = STATE_VOTED;
+      JsonDocument ans;
+      ans["question_id"] = currentQuestionId;
+      char tempBuf[10];
+      dtostrf(tempGuess, 4, 1, tempBuf);
+      ans["answer"]    = String(tempBuf);
+      ans["elapsed_ms"] = (int)(millis() - votingStartMs);
+      char buf[128];
+      serializeJson(ans, buf);
+      mqtt.publish(("quiz/answer/" + deviceId).c_str(), buf);
+      Serial.printf("[MQTT] Temp-Target gesendet: %.1f°C\n", tempGuess);
+    }
+
+    // ── Display ─────────────────────────────────────────────────────────────
+    aalec.display.clear();
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+    aalec.display.drawString(64, 0, "Temperatur-Challenge");
+    aalec.display.drawLine(0, 13, 128, 13);
+
+    // Zieltemperatur gross
+    aalec.display.setFont(ArialMT_Plain_24);
+    char tgtBuf[12];
+    dtostrf(tempTarget, 4, 1, tgtBuf);
+    aalec.display.drawString(64, 14, "Ziel: " + String(tgtBuf) + "C");
+
+    // Aktuelle Temperatur + Richtungspfeil
+    aalec.display.setFont(ArialMT_Plain_10);
+    char nowBuf[12];
+    dtostrf(tempNow, 4, 1, nowBuf);
+    String hint = (absDelta <= tempTolerance) ? "OK!" : (delta < 0 ? "waermer!" : "kaelter!");
+    aalec.display.drawString(64, 41, "Jetzt: " + String(nowBuf) + "C  " + hint);
+
+    // Abweichungs-Balken: Mitte = Ziel, links/rechts = Abweichung
+    int barCenter = 64;
+    int deviation = (int)constrain(delta * 5, -60, 60);  // ±12°C = voller Balken
+    aalec.display.drawRect(2, 54, 124, 8);
+    aalec.display.drawLine(barCenter, 52, barCenter, 64);  // Zielmarkierung Mitte
+    if (deviation > 0)
+      aalec.display.fillRect(barCenter, 54, deviation, 8);
+    else
+      aalec.display.fillRect(barCenter + deviation, 54, -deviation, 8);
+
+    displayShow();
+  }
+}
+
 // ===== ANTWORT-SCREEN (A/B/C/D mit Drehknopf) =====
 void showVoting() {
   while (quizState == STATE_VOTING) {
@@ -576,7 +773,7 @@ void showVoting() {
     // Drehknopf navigiert A/B/C/D
     if (aalec.rotate_changed()) {
       int rot = aalec.get_rotate();
-      selectedAnswer = constrain(selectedAnswer + (rot > 0 ? 1 : -1), 0, 3);
+      selectedAnswer = constrain(selectedAnswer + (rot > 0 ? -1 : 1), 0, 3);
       aalec.reset_rotate(0);
     }
 
@@ -586,6 +783,7 @@ void showVoting() {
       unsigned long elapsedMs = millis() - votingStartMs;
       Serial.print("[INPUT] Antwort gewaehlt: ");
       Serial.println(chosen);
+      soundSubmit();
       quizState = STATE_VOTED;
       JsonDocument ans;
       ans["question_id"] = currentQuestionId;
@@ -704,6 +902,9 @@ void showReveal() {
   for (int i = 0; i < 5; i++)
     setLED(i,correct ? c_green : c_red);
 
+  // Sound: Fanfare bei richtig, Misserfolg bei falsch
+  if (correct) soundCorrect(); else soundWrong();
+
   while (quizState == STATE_REVEAL) {
     checkConnection();
     mqtt.loop();
@@ -810,6 +1011,9 @@ void showEnded() {
 
   // Goldene LEDs für Gewinner-Atmosphäre
   for (int i = 0; i < 5; i++) setLED(i,c_yellow);
+
+  // Winner-Melodie einmal abspielen
+  soundWinner();
 
   while (quizState == STATE_ENDED) {
     checkConnection();
@@ -1076,6 +1280,8 @@ void loop() {
     case STATE_VOTING:
       if      (questionType == QTYPE_ESTIMATE)     showEstimate();
       else if (questionType == QTYPE_HIGHER_LOWER) showHigherLower();
+      else if (questionType == QTYPE_POTI_TARGET)  showPotiTarget();
+      else if (questionType == QTYPE_TEMP_TARGET)  showTempTarget();
       else                                         showVoting();
       break;
     case STATE_VOTED:   showVoted();   break;

@@ -41,7 +41,25 @@ export interface HigherLowerQuestion {
   time_limit_s: number;
 }
 
-export type Question = McqQuestion | EstimateQuestion | HigherLowerQuestion;
+export interface PotiTargetQuestion {
+  id: number;
+  type: "poti_target";
+  text: string;
+  target: number;
+  tolerance: number;
+  time_limit_s: number;
+}
+
+export interface TempTargetQuestion {
+  id: number;
+  type: "temp_target";
+  text: string;
+  target: number;
+  tolerance: number;
+  time_limit_s: number;
+}
+
+export type Question = McqQuestion | EstimateQuestion | HigherLowerQuestion | PotiTargetQuestion | TempTargetQuestion;
 
 // ── Reveal types ────────────────────────────────────────────────────────────
 
@@ -69,7 +87,23 @@ export interface HigherLowerReveal {
   counts: { HIGHER: number; LOWER: number };
 }
 
-export type Reveal = McqReveal | EstimateReveal | HigherLowerReveal;
+export interface PotiTargetReveal {
+  question_id: number;
+  type: "poti_target";
+  correct: number;
+  tolerance: number;
+  answers: { device_id: string; name: string; value: number; delta: number }[];
+}
+
+export interface TempTargetReveal {
+  question_id: number;
+  type: "temp_target";
+  correct: number;
+  tolerance: number;
+  answers: { device_id: string; name: string; value: number; delta: number }[];
+}
+
+export type Reveal = McqReveal | EstimateReveal | HigherLowerReveal | PotiTargetReveal | TempTargetReveal;
 
 // ── Other ───────────────────────────────────────────────────────────────────
 

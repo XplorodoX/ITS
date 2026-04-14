@@ -34,5 +34,19 @@
     "options": { "A": "Arduino Nano", "B": "ESP32", "C": "Raspberry Pi Pico", "D": "ESP8266 (Wemos D1 Mini)" },
     "correct": "D",
     "time_limit_s": 20
+  },
+  {
+    "type": "poti_target",
+    "text": "Dreh das Poti auf genau 75%!",
+    "target": 75,
+    "tolerance": 5,
+    "time_limit_s": 20
+  },
+  {
+    "type": "temp_target",
+    "text": "Wärme den Sensor auf 30°C!",
+    "target": 30.0,
+    "tolerance": 1.5,
+    "time_limit_s": 45
   }
 ]

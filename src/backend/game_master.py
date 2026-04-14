@@ -250,6 +250,12 @@ class GameMaster:
         elif q_type == "higher_lower":
             payload["reference"] = q["reference"]
             payload["unit"]      = q.get("unit", "")
+        elif q_type == "poti_target":
+            payload["target"]    = q["target"]
+            payload["tolerance"] = q.get("tolerance", 5)
+        elif q_type == "temp_target":
+            payload["target"]    = q["target"]
+            payload["tolerance"] = q.get("tolerance", 1.5)
         else:
             payload["options"] = q["options"]
         self._publish(T_QUESTION, payload)
@@ -294,6 +300,10 @@ class GameMaster:
             self._reveal_estimate(q, time_limit_ms, players_snapshot)
         elif q_type == "higher_lower":
             self._reveal_higher_lower(q, time_limit_ms, players_snapshot)
+        elif q_type == "poti_target":
+            self._reveal_poti_target(q, players_snapshot)
+        elif q_type == "temp_target":
+            self._reveal_temp_target(q, players_snapshot)
         else:
             self._reveal_mcq(q, time_limit_ms, players_snapshot)
 
@@ -413,6 +423,87 @@ class GameMaster:
             "counts":      counts,
         })
         print(f"[reveal/higher_lower] correct={correct}  actual={q['actual']}  counts={counts}")
+
+    # ── Poti Target reveal ────────────────────────────────────────────────────
+    def _reveal_poti_target(self, q: dict, players: dict):
+        correct   = int(q["target"])
+        tolerance = int(q.get("tolerance", 5))
+        answers_out = []
+
+        for device_id, ans in self.gs.answers.items():
+            if device_id not in players:
+                continue
+            player = players[device_id]
+            try:
+                guess = int(ans["answer"])
+            except (ValueError, KeyError):
+                player.streak = 0
+                continue
+            delta  = abs(guess - correct)
+            earned = 0
+            if delta <= tolerance:
+                # Score: full points at exact, linear decay to 0 at tolerance boundary
+                earned = round(BASE_SCORE * (1 - delta / max(tolerance, 1)))
+                player.streak += 1
+            else:
+                player.streak = 0
+            player.score += earned
+            answers_out.append({
+                "device_id": device_id,
+                "name":      player.name,
+                "value":     guess,
+                "delta":     delta,
+            })
+
+        answers_out.sort(key=lambda x: x["delta"])
+        self._publish(T_REVEAL, {
+            "question_id": self.gs.question_id,
+            "type":        "poti_target",
+            "correct":     correct,
+            "tolerance":   tolerance,
+            "answers":     answers_out,
+        })
+        print(f"[reveal/poti_target] correct={correct}%  tolerance=±{tolerance}%")
+
+    # ── Temp Target reveal ────────────────────────────────────────────────────
+    def _reveal_temp_target(self, q: dict, players: dict):
+        correct   = float(q["target"])
+        tolerance = float(q.get("tolerance", 1.5))
+        answers_out = []
+
+        for device_id, ans in self.gs.answers.items():
+            if device_id not in players:
+                continue
+            player = players[device_id]
+            try:
+                guess = float(ans["answer"])
+            except (ValueError, KeyError):
+                player.streak = 0
+                continue
+            delta  = abs(guess - correct)
+            earned = 0
+            if delta <= tolerance:
+                earned = round(BASE_SCORE * (1 - delta / max(tolerance, 1)))
+                player.streak += 1
+            else:
+                player.streak = 0
+            player.score += earned
+            answers_out.append({
+                "device_id": device_id,
+                "name":      player.name,
+                "value":     round(guess, 1),
+                "delta":     round(delta, 1),
+            })
+
+        answers_out.sort(key=lambda x: x["delta"])
+        self._publish(T_REVEAL, {
+            "question_id": self.gs.question_id,
+            "type":        "temp_target",
+            "correct":     correct,
+            "tolerance":   tolerance,
+            "answers":     answers_out,
+        })
+        print(f"[reveal/temp_target] correct={correct}°C  tolerance=±{tolerance}°C")
 
     def _transition_to_scores(self):
         self.gs.state = "SCORES"

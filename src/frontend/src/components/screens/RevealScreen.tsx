@@ -42,6 +42,66 @@ export default function RevealScreen({ question, reveal }: Props) {
     );
   }
 
+  // ── Poti Target ───────────────────────────────────────────────────────────
+  if (reveal.type === "poti_target") {
+    const maxDelta = Math.max(...reveal.answers.map(a => a.delta), 1);
+    return (
+      <div className={styles.screen}>
+        <h1 className={styles.questionText}>{question.text}</h1>
+        <div className={styles.estimateCorrect}>
+          Zielwert: <strong>{reveal.correct}%</strong>
+          <span style={{ marginLeft: "1rem", fontSize: "0.9rem", opacity: 0.7 }}>±{reveal.tolerance}%</span>
+        </div>
+        <div className={styles.estimateList}>
+          {reveal.answers.slice(0, 8).map((a, i) => (
+            <div key={a.device_id} className={styles.estimateRow}>
+              <span className={styles.estimateRank}>{i + 1}.</span>
+              <span className={styles.estimateName}>{a.name}</span>
+              <span className={styles.estimateValue}>{a.value}%</span>
+              <div className={styles.barTrack}>
+                <div
+                  className={styles.barFill}
+                  style={{ width: `${Math.round((1 - a.delta / maxDelta) * 100)}%`, "--opt-color": "#6c63ff" } as React.CSSProperties}
+                />
+              </div>
+              <span className={styles.estimateDelta}>±{a.delta}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Temp Target ───────────────────────────────────────────────────────────
+  if (reveal.type === "temp_target") {
+    const maxDelta = Math.max(...reveal.answers.map(a => a.delta), 1);
+    return (
+      <div className={styles.screen}>
+        <h1 className={styles.questionText}>{question.text}</h1>
+        <div className={styles.estimateCorrect}>
+          Zieltemperatur: <strong>{reveal.correct} °C</strong>
+          <span style={{ marginLeft: "1rem", fontSize: "0.9rem", opacity: 0.7 }}>±{reveal.tolerance} °C</span>
+        </div>
+        <div className={styles.estimateList}>
+          {reveal.answers.slice(0, 8).map((a, i) => (
+            <div key={a.device_id} className={styles.estimateRow}>
+              <span className={styles.estimateRank}>{i + 1}.</span>
+              <span className={styles.estimateName}>{a.name}</span>
+              <span className={styles.estimateValue}>{a.value.toFixed(1)} °C</span>
+              <div className={styles.barTrack}>
+                <div
+                  className={styles.barFill}
+                  style={{ width: `${Math.round((1 - a.delta / maxDelta) * 100)}%`, "--opt-color": "#f97316" } as React.CSSProperties}
+                />
+              </div>
+              <span className={styles.estimateDelta}>±{a.delta.toFixed(1)} °C</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // ── Higher / Lower ────────────────────────────────────────────────────────
   if (reveal.type === "higher_lower") {
     const total   = (reveal.counts.HIGHER + reveal.counts.LOWER) || 1;

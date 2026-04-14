@@ -34,7 +34,11 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
   const header = (
     <div className={styles.questionHeader}>
       <span className={styles.questionLabel}>
-        {qtype === "estimate" ? "Schätzfrage" : qtype === "higher_lower" ? "Höher / Niedriger?" : "Frage"}
+        {qtype === "estimate" ? "Schätzfrage"
+        : qtype === "higher_lower" ? "Höher / Niedriger?"
+        : qtype === "poti_target" ? "Poti-Challenge"
+        : qtype === "temp_target" ? "Temperatur-Challenge"
+        : "Frage"}
       </span>
       {voting && (
         <span className={styles.timerBadge} style={{ "--pct": pct } as React.CSSProperties}>
@@ -75,6 +79,40 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
         <div className={styles.hlChoices}>
           <div className={`${styles.hlCard} ${styles.hlHigher}`}>↑ Höher</div>
           <div className={`${styles.hlCard} ${styles.hlLower}`}>↓ Niedriger</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (qtype === "poti_target") {
+    const q = question as Extract<typeof question, { type: "poti_target" }>;
+    return (
+      <div className={styles.screen}>
+        {header}
+        <h1 className={styles.questionText}>{q.text}</h1>
+        <div className={styles.estimateHint}>
+          <span className={styles.estimateRange} style={{ fontSize: "2.5rem", fontWeight: 700 }}>
+            Ziel: {q.target}%
+          </span>
+          <p className={styles.estimateInstr}>Poti drehen bis zum Zielwert, dann Knopf drücken</p>
+          <p className={styles.estimateInstr}>Toleranz: ±{q.tolerance}%</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (qtype === "temp_target") {
+    const q = question as Extract<typeof question, { type: "temp_target" }>;
+    return (
+      <div className={styles.screen}>
+        {header}
+        <h1 className={styles.questionText}>{q.text}</h1>
+        <div className={styles.estimateHint}>
+          <span className={styles.estimateRange} style={{ fontSize: "2.5rem", fontWeight: 700 }}>
+            Ziel: {q.target} °C
+          </span>
+          <p className={styles.estimateInstr}>Sensor auf die Zieltemperatur bringen, dann Knopf drücken</p>
+          <p className={styles.estimateInstr}>Toleranz: ±{q.tolerance} °C</p>
         </div>
       </div>
     );

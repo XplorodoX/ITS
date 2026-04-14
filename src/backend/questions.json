@@ -12,6 +12,24 @@
     "time_limit_s": 20
   },
   {
+    "type": "estimate",
+    "text": "Wie viele Einwohner hat Stuttgart? (Tausend)",
+    "min": 0,
+    "max": 1000,
+    "unit": "Tsd.",
+    "correct": 626,
+    "time_limit_s": 30
+  },
+  {
+    "type": "higher_lower",
+    "text": "Ist der Eiffelturm höher oder niedriger als 400 m?",
+    "reference": 400,
+    "unit": "m",
+    "correct": "LOWER",
+    "actual": 330,
+    "time_limit_s": 20
+  },
+  {
     "text": "Auf welchem Mikrocontroller basiert das AALeC V3?",
     "options": { "A": "Arduino Nano", "B": "ESP32", "C": "Raspberry Pi Pico", "D": "ESP8266 (Wemos D1 Mini)" },
     "correct": "D",

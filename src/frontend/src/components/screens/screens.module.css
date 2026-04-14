@@ -288,6 +288,102 @@
   color: var(--accent);
 }
 
+/* ── Estimate question ──────────────────────────────────────────────── */
+.estimateHint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.estimateRange {
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 1rem;
+  padding: 0.5rem 2rem;
+}
+
+.estimateInstr {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.estimateCorrect {
+  font-size: 1.6rem;
+  color: var(--muted);
+  margin: 1rem 0;
+}
+
+.estimateCorrect strong { color: var(--green); }
+
+.estimateList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 900px;
+}
+
+.estimateRow {
+  display: grid;
+  grid-template-columns: 2.5rem 12rem 7rem 1fr 5rem;
+  align-items: center;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.6rem 1rem;
+}
+
+.estimateRank  { font-size: 1.1rem; color: var(--muted); }
+.estimateName  { font-size: 1.1rem; font-weight: 600; }
+.estimateValue { font-size: 1.1rem; font-weight: 700; color: var(--accent); text-align: right; }
+.estimateDelta { font-size: 1rem; color: var(--muted); text-align: right; }
+
+/* ── Higher / Lower ─────────────────────────────────────────────────── */
+.hlReference {
+  margin: 1.5rem 0 0.5rem;
+}
+
+.hlValue {
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.hlChoices {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.hlCard {
+  flex: 1;
+  max-width: 280px;
+  padding: 1.5rem 2rem;
+  border-radius: 1rem;
+  border: 2px solid var(--border);
+  font-size: 1.8rem;
+  font-weight: 800;
+  text-align: center;
+  background: var(--surface);
+}
+
+.hlHigher { border-color: #22c55e; color: #22c55e; }
+.hlLower  { border-color: #ef4444; color: #ef4444; }
+
+.hlRevealActual {
+  font-size: 1.6rem;
+  color: var(--muted);
+  margin: 1rem 0;
+}
+
+.hlRevealActual strong { color: var(--text); }
+
 /* ── Restart button ─────────────────────────────────────────────────── */
 .restartBtn {
   margin-top: 1.5rem;

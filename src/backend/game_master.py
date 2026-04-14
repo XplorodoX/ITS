@@ -42,6 +42,15 @@ TIME_BONUS           = 500
 STREAK_BONUS_PER_LVL = 200   # extra points per consecutive correct answer
 MAX_STREAK_LEVELS    = 3      # cap at level 3 → max +600
 
+# Estimate: tiered score by relative error  (|guess - correct| / range)
+ESTIMATE_TIERS = [
+    (0.00, 1000),  # exact (≤0%)
+    (0.05,  800),  # within 5 % of range
+    (0.10,  600),  # within 10 %
+    (0.20,  400),  # within 20 %
+    (0.30,  200),  # within 30 %
+]                  # beyond 30 % → 0 points
+
 
 @dataclass
 class Player:
@@ -222,12 +231,23 @@ class GameMaster:
         self.gs.question_start = time.monotonic()
         self.gs.answers        = {}
 
-        self._publish(T_QUESTION, {
+        q_type  = q.get("type", "mcq")
+        payload: dict = {
             "id":           self.gs.question_id,
+            "type":         q_type,
             "text":         q["text"],
-            "options":      q["options"],
             "time_limit_s": q["time_limit_s"],
-        })
+        }
+        if q_type == "estimate":
+            payload["min"]  = q["min"]
+            payload["max"]  = q["max"]
+            payload["unit"] = q.get("unit", "")
+        elif q_type == "higher_lower":
+            payload["reference"] = q["reference"]
+            payload["unit"]      = q.get("unit", "")
+        else:
+            payload["options"] = q["options"]
+        self._publish(T_QUESTION, payload)
         self._publish_state(remaining_s=q["time_limit_s"])
         print(f"[question {self.gs.question_id}] {q['text']}")
 
@@ -242,21 +262,41 @@ class GameMaster:
         self._set_timer(q["time_limit_s"], self._transition_to_reveal)
 
     def _transition_to_reveal(self):
-        q       = self.questions[self.gs.question_index]
-        correct = q["correct"].upper()
+        q            = self.questions[self.gs.question_index]
+        q_type       = q.get("type", "mcq")
+        time_limit_ms = q["time_limit_s"] * 1000
+        with self._lock:
+            players_snapshot = dict(self.players)
 
+        # ── mark no-answer players streak=0 ──────────────────────────────────
+        for device_id, player in players_snapshot.items():
+            if device_id not in self.gs.answers:
+                player.streak = 0
+
+        self.gs.state = "REVEAL"
+
+        if q_type == "estimate":
+            self._reveal_estimate(q, time_limit_ms, players_snapshot)
+        elif q_type == "higher_lower":
+            self._reveal_higher_lower(q, time_limit_ms, players_snapshot)
+        else:
+            self._reveal_mcq(q, time_limit_ms, players_snapshot)
+
+        self._publish_state()
+        self._set_timer(5, self._transition_to_scores)
+
+    # ── MCQ reveal ────────────────────────────────────────────────────────────
+    def _reveal_mcq(self, q: dict, time_limit_ms: int, players: dict):
+        correct = q["correct"].upper()
         counts: dict[str, int] = {k: 0 for k in q["options"]}
         for ans in self.gs.answers.values():
             if ans["answer"] in counts:
                 counts[ans["answer"]] += 1
 
-        time_limit_ms = q["time_limit_s"] * 1000
-        with self._lock:
-            players_snapshot = dict(self.players)
         for device_id, ans in self.gs.answers.items():
-            if device_id not in players_snapshot:
+            if device_id not in players:
                 continue
-            player = players_snapshot[device_id]
+            player = players[device_id]
             if ans["answer"] == correct:
                 player.streak += 1
                 elapsed      = min(ans["elapsed_ms"], time_limit_ms)
@@ -269,19 +309,95 @@ class GameMaster:
             else:
                 player.streak = 0
 
-        for device_id, player in players_snapshot.items():
-            if device_id not in self.gs.answers:
-                player.streak = 0
-
-        self.gs.state = "REVEAL"
         self._publish(T_REVEAL, {
             "question_id": self.gs.question_id,
             "correct":     correct,
             "counts":      counts,
         })
-        self._publish_state()
-        print(f"[reveal] correct={correct}  counts={counts}")
-        self._set_timer(5, self._transition_to_scores)
+        print(f"[reveal/mcq] correct={correct}  counts={counts}")
+
+    # ── Estimate reveal ───────────────────────────────────────────────────────
+    def _reveal_estimate(self, q: dict, time_limit_ms: int, players: dict):
+        correct  = int(q["correct"])
+        rng      = max(q["max"] - q["min"], 1)
+        answers_out = []
+
+        for device_id, ans in self.gs.answers.items():
+            if device_id not in players:
+                continue
+            player = players[device_id]
+            try:
+                guess = int(ans["answer"])
+            except (ValueError, TypeError):
+                player.streak = 0
+                continue
+
+            delta        = abs(guess - correct)
+            rel_err      = delta / rng
+            base         = 0
+            for threshold, pts in ESTIMATE_TIERS:
+                if rel_err <= threshold:
+                    base = pts
+                    break
+            if base > 0:
+                elapsed    = min(ans["elapsed_ms"], time_limit_ms)
+                time_bonus = round(TIME_BONUS * (1 - elapsed / time_limit_ms))
+                player.score += base + time_bonus
+                player.streak += 1
+            else:
+                player.streak = 0
+
+            answers_out.append({
+                "device_id": device_id,
+                "name":      player.name,
+                "value":     guess,
+                "delta":     delta,
+            })
+            print(f"  {device_id}: guess={guess}  delta={delta}  pts={base}")
+
+        answers_out.sort(key=lambda x: x["delta"])
+        self._publish(T_REVEAL, {
+            "question_id": self.gs.question_id,
+            "type":        "estimate",
+            "correct":     correct,
+            "unit":        q.get("unit", ""),
+            "answers":     answers_out,
+        })
+        print(f"[reveal/estimate] correct={correct}")
+
+    # ── Higher / Lower reveal ─────────────────────────────────────────────────
+    def _reveal_higher_lower(self, q: dict, time_limit_ms: int, players: dict):
+        correct = q["correct"].upper()   # "HIGHER" or "LOWER"
+        counts  = {"HIGHER": 0, "LOWER": 0}
+
+        for ans in self.gs.answers.values():
+            key = ans["answer"].upper()
+            if key in counts:
+                counts[key] += 1
+
+        for device_id, ans in self.gs.answers.items():
+            if device_id not in players:
+                continue
+            player = players[device_id]
+            if ans["answer"].upper() == correct:
+                player.streak += 1
+                elapsed      = min(ans["elapsed_ms"], time_limit_ms)
+                time_bonus   = round(TIME_BONUS * (1 - elapsed / time_limit_ms))
+                streak_level = min(player.streak - 1, MAX_STREAK_LEVELS)
+                streak_bonus = streak_level * STREAK_BONUS_PER_LVL
+                player.score += BASE_SCORE + time_bonus + streak_bonus
+            else:
+                player.streak = 0
+
+        self._publish(T_REVEAL, {
+            "question_id": self.gs.question_id,
+            "type":        "higher_lower",
+            "correct":     correct,
+            "actual":      q["actual"],
+            "unit":        q.get("unit", ""),
+            "counts":      counts,
+        })
+        print(f"[reveal/higher_lower] correct={correct}  actual={q['actual']}  counts={counts}")
 
     def _transition_to_scores(self):
         self.gs.state = "SCORES"

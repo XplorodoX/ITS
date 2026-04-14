@@ -15,52 +15,76 @@ interface Props {
 }
 
 export default function QuestionScreen({ question, remainingS, voting, answerCount }: Props) {
-  // Local countdown — ticks independently of MQTT updates
   const [countdown, setCountdown] = useState(remainingS);
 
-  // Sync when a new question arrives (remainingS jumps to a new value)
-  useEffect(() => {
-    setCountdown(remainingS);
-  }, [remainingS, question.id]);
+  useEffect(() => { setCountdown(remainingS); }, [remainingS, question.id]);
 
-  // Tick every second while voting is open
   useEffect(() => {
     if (!voting) return;
     const id = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(id);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setCountdown(prev => { if (prev <= 1) { clearInterval(id); return 0; } return prev - 1; });
     }, 1000);
     return () => clearInterval(id);
   }, [voting, question.id]);
 
-  const pct = Math.max(0, countdown / question.time_limit_s);
-
-  // Only show answer count if it belongs to the current question
+  const pct   = Math.max(0, countdown / question.time_limit_s);
   const count = answerCount?.question_id === question.id ? answerCount : null;
+  const qtype = question.type ?? "mcq";
 
+  const header = (
+    <div className={styles.questionHeader}>
+      <span className={styles.questionLabel}>
+        {qtype === "estimate" ? "Schätzfrage" : qtype === "higher_lower" ? "Höher / Niedriger?" : "Frage"}
+      </span>
+      {voting && (
+        <span className={styles.timerBadge} style={{ "--pct": pct } as React.CSSProperties}>
+          {countdown}s
+        </span>
+      )}
+      {voting && count && (
+        <span className={styles.answerCounter}>{count.count} / {count.total} geantwortet</span>
+      )}
+    </div>
+  );
+
+  if (qtype === "estimate") {
+    return (
+      <div className={styles.screen}>
+        {header}
+        <h1 className={styles.questionText}>{question.text}</h1>
+        <div className={styles.estimateHint}>
+          <span className={styles.estimateRange}>
+            {question.min} – {question.max}{question.unit ? ` ${question.unit}` : ""}
+          </span>
+          <p className={styles.estimateInstr}>Drehknopf zum Schätzen, Drücken zum Bestätigen</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (qtype === "higher_lower") {
+    return (
+      <div className={styles.screen}>
+        {header}
+        <h1 className={styles.questionText}>{question.text}</h1>
+        <div className={styles.hlReference}>
+          <span className={styles.hlValue}>
+            {question.reference}{question.unit ? ` ${question.unit}` : ""}
+          </span>
+        </div>
+        <div className={styles.hlChoices}>
+          <div className={`${styles.hlCard} ${styles.hlHigher}`}>↑ Höher</div>
+          <div className={`${styles.hlCard} ${styles.hlLower}`}>↓ Niedriger</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: MCQ
   return (
     <div className={styles.screen}>
-      <div className={styles.questionHeader}>
-        <span className={styles.questionLabel}>Frage</span>
-        {voting && (
-          <span className={styles.timerBadge} style={{ "--pct": pct } as React.CSSProperties}>
-            {countdown}s
-          </span>
-        )}
-        {voting && count && (
-          <span className={styles.answerCounter}>
-            {count.count} / {count.total} geantwortet
-          </span>
-        )}
-      </div>
-
+      {header}
       <h1 className={styles.questionText}>{question.text}</h1>
-
       <div className={styles.optionsGrid}>
         {LABELS.map((key, i) => (
           <div
@@ -69,7 +93,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
             style={{ "--opt-color": COLORS[i] } as React.CSSProperties}
           >
             <span className={styles.optionKey}>{key}</span>
-            <span className={styles.optionText}>{question.options[key]}</span>
+            <span className={styles.optionText}>{(question as Extract<typeof question, { options: unknown }>).options[key]}</span>
           </div>
         ))}
       </div>

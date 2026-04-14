@@ -29,13 +29,30 @@ enum QuizState { STATE_WAITING, STATE_VOTING, STATE_VOTED, STATE_REVEAL, STATE_E
 QuizState quizState       = STATE_WAITING;
 bool      registeredByServer = false;   // true after quiz/ack received
 
-char answers[4][32]     = { "?", "?", "?", "?" };  // filled by quiz/question (not shown on display)
+// ── MCQ ──────────────────────────────────────────────────────────────────────
+char answers[4][32]     = { "?", "?", "?", "?" };
 char correctAnswer      = 'A';
 int  answerCounts[4]    = { 0, 0, 0, 0 };
-int  selectedAnswer     = 0;   // 0=A, 1=B, 2=C, 3=D
-int  currentQuestionId  = 0;   // set from quiz/question
-int  timeLimitS         = 20;  // set from quiz/question
-unsigned long votingStartMs = 0; // when VOTING state began
+int  selectedAnswer     = 0;   // 0=A … 3=D
+
+// ── Estimate ──────────────────────────────────────────────────────────────────
+int  estimateMin   = 0;
+int  estimateMax   = 100;
+int  estimateValue = 50;   // current rotary position
+char estimateUnit[16] = "";
+
+// ── Higher / Lower ────────────────────────────────────────────────────────────
+int  hlReference = 0;
+char hlUnit[16]  = "";
+// selectedAnswer reused: 0 = HÖHER, 1 = NIEDRIGER
+
+// ── Common ───────────────────────────────────────────────────────────────────
+enum QuestionType { QTYPE_MCQ, QTYPE_ESTIMATE, QTYPE_HIGHER_LOWER };
+QuestionType questionType    = QTYPE_MCQ;
+int          currentQuestionId = 0;
+int          timeLimitS        = 20;
+unsigned long votingStartMs    = 0;
+bool         revealWasCorrect  = false;  // set by quiz/reveal handler
 
 // ===== FORWARD DECLARATIONS =====
 void checkConnection();
@@ -65,20 +82,37 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if (t == "quiz/question") {
     currentQuestionId = doc["id"] | 0;
     timeLimitS        = doc["time_limit_s"] | 20;
-    const char* opts[4] = { "A", "B", "C", "D" };
-    for (int i = 0; i < 4; i++) {
-      const char* val = doc["options"][opts[i]];
-      if (val) strncpy(answers[i], val, 31);
-      answers[i][31] = '\0';
-    }
-    // Reset Auswahl und Zähler für neue Frage
-    selectedAnswer = 0;
-    correctAnswer  = 'A';
+    selectedAnswer    = 0;
+    correctAnswer     = 'A';
     for (int i = 0; i < 4; i++) answerCounts[i] = 0;
     if (quizState == STATE_VOTED) quizState = STATE_WAITING;
-    Serial.print("[QUESTION] Optionen: ");
-    for (int i = 0; i < 4; i++) { Serial.print(answers[i]); Serial.print(" "); }
-    Serial.println();
+
+    const char* typeStr = doc["type"] | "mcq";
+    if (strcmp(typeStr, "estimate") == 0) {
+      questionType  = QTYPE_ESTIMATE;
+      estimateMin   = doc["min"] | 0;
+      estimateMax   = doc["max"] | 100;
+      estimateValue = (estimateMin + estimateMax) / 2;  // start in the middle
+      const char* u = doc["unit"] | "";
+      strncpy(estimateUnit, u, 15); estimateUnit[15] = '\0';
+      Serial.printf("[QUESTION/estimate] min=%d max=%d unit=%s\n", estimateMin, estimateMax, estimateUnit);
+    } else if (strcmp(typeStr, "higher_lower") == 0) {
+      questionType = QTYPE_HIGHER_LOWER;
+      hlReference  = doc["reference"] | 0;
+      const char* u = doc["unit"] | "";
+      strncpy(hlUnit, u, 15); hlUnit[15] = '\0';
+      selectedAnswer = 0;  // 0=HÖHER, 1=NIEDRIGER
+      Serial.printf("[QUESTION/higher_lower] reference=%d unit=%s\n", hlReference, hlUnit);
+    } else {
+      questionType = QTYPE_MCQ;
+      const char* opts[4] = { "A", "B", "C", "D" };
+      for (int i = 0; i < 4; i++) {
+        const char* val = doc["options"][opts[i]];
+        if (val) strncpy(answers[i], val, 31);
+        answers[i][31] = '\0';
+      }
+      Serial.println("[QUESTION/mcq]");
+    }
     return;
   }
 
@@ -108,13 +142,37 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       for (int i = 0; i < 4; i++) answerCounts[i] = 0;
     }
   } else if (t == "quiz/reveal") {
-    correctAnswer    = doc["correct"].as<String>()[0];
-    answerCounts[0]  = doc["counts"]["A"] | 0;
-    answerCounts[1]  = doc["counts"]["B"] | 0;
-    answerCounts[2]  = doc["counts"]["C"] | 0;
-    answerCounts[3]  = doc["counts"]["D"] | 0;
-    Serial.print("[REVEAL] Richtige Antwort: ");
-    Serial.println(correctAnswer);
+    const char* revType = doc["type"] | "mcq";
+
+    if (strcmp(revType, "estimate") == 0) {
+      int correct = doc["correct"] | 0;
+      int delta   = abs(estimateValue - correct);
+      int rng     = max(estimateMax - estimateMin, 1);
+      float relErr = (float)delta / rng;
+      revealWasCorrect = (relErr <= 0.30f);  // innerhalb 30% → "richtig genug"
+      answerCounts[0] = correct;             // missbraucht zum Anzeigen
+      Serial.printf("[REVEAL/estimate] correct=%d guess=%d delta=%d\n", correct, estimateValue, delta);
+
+    } else if (strcmp(revType, "higher_lower") == 0) {
+      String correctStr = doc["correct"].as<String>();
+      correctStr.toUpperCase();
+      bool guessedHigher = (selectedAnswer == 0);
+      bool correctHigher = (correctStr == "HIGHER");
+      revealWasCorrect   = (guessedHigher == correctHigher);
+      answerCounts[0]    = doc["counts"]["HIGHER"] | 0;
+      answerCounts[1]    = doc["counts"]["LOWER"]  | 0;
+      Serial.printf("[REVEAL/higher_lower] correct=%s guessed=%s\n",
+                    correctStr.c_str(), guessedHigher ? "HIGHER" : "LOWER");
+
+    } else {
+      correctAnswer    = doc["correct"].as<String>()[0];
+      answerCounts[0]  = doc["counts"]["A"] | 0;
+      answerCounts[1]  = doc["counts"]["B"] | 0;
+      answerCounts[2]  = doc["counts"]["C"] | 0;
+      answerCounts[3]  = doc["counts"]["D"] | 0;
+      revealWasCorrect = (selectedAnswer == (correctAnswer - 'A'));
+      Serial.printf("[REVEAL/mcq] correct=%c\n", correctAnswer);
+    }
     quizState = STATE_REVEAL;
   }
 }
@@ -277,6 +335,155 @@ void showWaiting() {
   }
 }
 
+// ===== SCHÄTZFRAGE-SCREEN =====
+void showEstimate() {
+  while (quizState == STATE_VOTING) {
+    checkConnection();
+    mqtt.loop();
+
+    // ── Countdown-LEDs ──────────────────────────────────────────────────────
+    {
+      unsigned long elapsed = millis() - votingStartMs;
+      unsigned long limitMs = (unsigned long)timeLimitS * 1000UL;
+      if (elapsed > limitMs) elapsed = limitMs;
+      int ledsOn = (int)(((limitMs - elapsed) * 5UL + limitMs - 1) / limitMs);
+      float pct  = (float)(limitMs - elapsed) / limitMs;
+      for (int i = 0; i < 5; i++) {
+        if (i < ledsOn) {
+          RgbColor col = (pct > 0.6f) ? c_green : (pct > 0.4f) ? c_yellow : c_red;
+          setLED(i, col);
+        } else {
+          setLED(i, c_off);
+        }
+      }
+    }
+
+    // ── Drehknopf ändert Schätzwert ─────────────────────────────────────────
+    if (aalec.rotate_changed()) {
+      int rot = aalec.get_rotate();
+      estimateValue = constrain(estimateValue + rot, estimateMin, estimateMax);
+      aalec.reset_rotate(0);
+    }
+
+    // ── Button bestätigt ────────────────────────────────────────────────────
+    if (aalec.button_changed() && aalec.get_button() == 1) {
+      unsigned long elapsedMs = millis() - votingStartMs;
+      quizState = STATE_VOTED;
+      JsonDocument ans;
+      ans["question_id"] = currentQuestionId;
+      ans["answer"]      = String(estimateValue);
+      ans["elapsed_ms"]  = (int)elapsedMs;
+      char buf[128];
+      serializeJson(ans, buf);
+      mqtt.publish(("quiz/answer/" + deviceId).c_str(), buf);
+      Serial.printf("[MQTT] Schätzung gesendet: %s\n", buf);
+    }
+
+    // ── Display ─────────────────────────────────────────────────────────────
+    aalec.display.clear();
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+    aalec.display.drawString(64, 0, "Schaetzfrage");
+    aalec.display.drawLine(0, 13, 128, 13);
+
+    // Großer Schätzwert mittig
+    aalec.display.setFont(ArialMT_Plain_24);
+    String valStr = String(estimateValue);
+    if (strlen(estimateUnit) > 0) { valStr += " "; valStr += estimateUnit; }
+    aalec.display.drawString(64, 20, valStr);
+
+    // Min / Max als Orientierung
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
+    aalec.display.drawString(0, 53, String(estimateMin));
+    aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
+    aalec.display.drawString(128, 53, String(estimateMax));
+
+    displayShow();
+    delay(20);
+  }
+}
+
+// ===== HÖHER / NIEDRIGER SCREEN =====
+void showHigherLower() {
+  while (quizState == STATE_VOTING) {
+    checkConnection();
+    mqtt.loop();
+
+    // ── Countdown-LEDs ──────────────────────────────────────────────────────
+    {
+      unsigned long elapsed = millis() - votingStartMs;
+      unsigned long limitMs = (unsigned long)timeLimitS * 1000UL;
+      if (elapsed > limitMs) elapsed = limitMs;
+      int ledsOn = (int)(((limitMs - elapsed) * 5UL + limitMs - 1) / limitMs);
+      float pct  = (float)(limitMs - elapsed) / limitMs;
+      for (int i = 0; i < 5; i++) {
+        if (i < ledsOn) {
+          RgbColor col = (pct > 0.6f) ? c_green : (pct > 0.4f) ? c_yellow : c_red;
+          setLED(i, col);
+        } else {
+          setLED(i, c_off);
+        }
+      }
+    }
+
+    // ── Drehknopf wechselt HÖHER / NIEDRIGER ────────────────────────────────
+    if (aalec.rotate_changed()) {
+      int rot = aalec.get_rotate();
+      selectedAnswer = constrain(selectedAnswer + (rot > 0 ? 1 : -1), 0, 1);
+      aalec.reset_rotate(0);
+    }
+
+    // ── Button bestätigt ────────────────────────────────────────────────────
+    if (aalec.button_changed() && aalec.get_button() == 1) {
+      unsigned long elapsedMs = millis() - votingStartMs;
+      quizState = STATE_VOTED;
+      String chosenStr = (selectedAnswer == 0) ? "HIGHER" : "LOWER";
+      JsonDocument ans;
+      ans["question_id"] = currentQuestionId;
+      ans["answer"]      = chosenStr;
+      ans["elapsed_ms"]  = (int)elapsedMs;
+      char buf[128];
+      serializeJson(ans, buf);
+      mqtt.publish(("quiz/answer/" + deviceId).c_str(), buf);
+      Serial.printf("[MQTT] Higher/Lower gesendet: %s\n", buf);
+    }
+
+    // ── Display ─────────────────────────────────────────────────────────────
+    aalec.display.clear();
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+    aalec.display.drawString(64, 0, "Hoeher / Niedriger?");
+    aalec.display.drawLine(0, 13, 128, 13);
+
+    // Referenzwert
+    aalec.display.setFont(ArialMT_Plain_16);
+    String refStr = String(hlReference);
+    if (strlen(hlUnit) > 0) { refStr += " "; refStr += hlUnit; }
+    aalec.display.drawString(64, 14, refStr);
+
+    // Zwei Felder: HÖHER (oben) und NIEDRIGER (unten)
+    for (int i = 0; i < 2; i++) {
+      int gy = 33 + i * 16;
+      if (i == selectedAnswer) {
+        aalec.display.setColor(WHITE);
+        aalec.display.fillRect(1, gy, 126, 14);
+        aalec.display.setColor(BLACK);
+      } else {
+        aalec.display.setColor(WHITE);
+        aalec.display.drawRect(1, gy, 126, 14);
+      }
+      aalec.display.setFont(ArialMT_Plain_10);
+      aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+      aalec.display.drawString(64, gy + 2, i == 0 ? "Hoeher" : "Niedriger");
+      aalec.display.setColor(WHITE);
+    }
+
+    displayShow();
+    delay(20);
+  }
+}
+
 // ===== ANTWORT-SCREEN (A/B/C/D mit Drehknopf) =====
 void showVoting() {
   while (quizState == STATE_VOTING) {
@@ -408,7 +615,7 @@ void showVoted() {
 
 // ===== ERGEBNIS-SCREEN =====
 void showReveal() {
-  bool correct = (selectedAnswer == (correctAnswer - 'A'));
+  bool correct = revealWasCorrect;
 
   // LEDs: Grün = richtig, Rot = falsch
   for (int i = 0; i < 5; i++)
@@ -602,6 +809,8 @@ bool handleConnectionLoss() {
 // Prüft WiFi (mit Debounce) und MQTT getrennt.
 // WiFi-Flicker (kurzes WL_DISCONNECTED) löst keinen Reconnect aus.
 void checkConnection() {
+  if (isHosting) return;  // AP-Modus: kein Reconnect, wir sind selbst das Netzwerk
+
   if (WiFi.status() != WL_CONNECTED) {
     _wifiFailCount++;
     if (_wifiFailCount >= WIFI_FAIL_THRESHOLD) {
@@ -726,7 +935,11 @@ void setup() {
 void loop() {
   switch (quizState) {
     case STATE_WAITING: showWaiting(); break;
-    case STATE_VOTING:  showVoting();  break;
+    case STATE_VOTING:
+      if      (questionType == QTYPE_ESTIMATE)     showEstimate();
+      else if (questionType == QTYPE_HIGHER_LOWER) showHigherLower();
+      else                                         showVoting();
+      break;
     case STATE_VOTED:   showVoted();   break;
     case STATE_REVEAL:  showReveal();  break;
     case STATE_ENDED:   showEnded();   break;

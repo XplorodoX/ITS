@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useMqtt } from "@/hooks/useMqtt";
+import { useSound } from "@/hooks/useSound";
 
 import WaitingScreen  from "@/components/screens/WaitingScreen";
 import QuestionScreen from "@/components/screens/QuestionScreen";
@@ -15,6 +16,8 @@ export default function BeamerPage() {
   const lobbyPlayers  = players?.players    ?? [];
   const minPlayers    = players?.min_players ?? 2;
   const currentState  = gameState?.state     ?? "WAITING";
+
+  useSound(currentState);
 
   const handleStart = useCallback(() => {
     publish("quiz/control", { action: "start" });

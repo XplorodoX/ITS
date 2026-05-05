@@ -14,6 +14,8 @@ State machine:
 
 import argparse
 import json
+import os
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -54,6 +56,64 @@ ESTIMATE_TIERS = [
     (0.30,  200),  # within 30 %
 ]                  # beyond 30 % → 0 points
 
+VALID_TYPES = {"mcq", "estimate", "higher_lower", "poti_target", "temp_target"}
+
+
+def validate_questions(questions: list[dict]) -> None:
+    """Check question list for missing/invalid fields. Exits with a clear error message."""
+    if not questions:
+        sys.exit("ERROR: questions file is empty — need at least one question.")
+
+    errors: list[str] = []
+
+    for i, q in enumerate(questions):
+        label  = f"  question {i + 1}"
+        q_type = q.get("type", "mcq")
+
+        if q_type not in VALID_TYPES:
+            errors.append(
+                f"{label}: unknown type {q_type!r}"
+                f" (valid: {', '.join(sorted(VALID_TYPES))})"
+            )
+            continue
+
+        missing: list[str] = []
+        if "text" not in q:
+            missing.append("text")
+        if "time_limit_s" not in q:
+            missing.append("time_limit_s")
+
+        if q_type == "mcq":
+            opts = q.get("options", {})
+            if not isinstance(opts, dict) or set(opts.keys()) != {"A", "B", "C", "D"}:
+                missing.append("options (dict with keys A B C D)")
+            if str(q.get("correct", "")).upper() not in ("A", "B", "C", "D"):
+                missing.append("correct (A | B | C | D)")
+        elif q_type == "estimate":
+            for field_name in ("min", "max", "correct"):
+                if field_name not in q:
+                    missing.append(field_name)
+        elif q_type == "higher_lower":
+            for field_name in ("reference", "actual"):
+                if field_name not in q:
+                    missing.append(field_name)
+            if str(q.get("correct", "")).upper() not in ("HIGHER", "LOWER"):
+                missing.append("correct (HIGHER | LOWER)")
+        elif q_type in ("poti_target", "temp_target"):
+            if "target" not in q:
+                missing.append("target")
+
+        if missing:
+            errors.append(f"{label} (type={q_type!r}): missing/invalid: {', '.join(missing)}")
+
+    if errors:
+        print("ERROR: question file validation failed:")
+        for e in errors:
+            print(e)
+        sys.exit(1)
+
+    print(f"[questions] {len(questions)} question(s) validated OK")
+
 
 @dataclass
 class Player:
@@ -74,19 +134,69 @@ class GameState:
 
 
 class GameMaster:
-    def __init__(self, broker: str, port: int, questions: list[dict]):
-        self.broker    = broker
-        self.port      = port
-        self.questions = questions
+    def __init__(self, broker: str, port: int, questions: list[dict], state_file: str = "game_state.json"):
+        self.broker     = broker
+        self.port       = port
+        self.questions  = questions
+        self.state_file = state_file
         self.players: dict[str, Player] = {}
-        self.gs        = GameState()
+        self.gs         = GameState()
         self._timer: Optional[threading.Timer] = None
-        self._lock     = threading.Lock()
+        self._lock      = threading.Lock()
+
+        self._load_persisted_state()
 
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        self.client.reconnect_delay_set(min_delay=1, max_delay=30)
         self.client.on_connect    = self._on_connect
         self.client.on_message    = self._on_message
         self.client.on_disconnect = self._on_disconnect
+
+    # ── Persistence ───────────────────────────────────────────────────────────
+
+    def _load_persisted_state(self) -> None:
+        if not os.path.exists(self.state_file):
+            return
+        try:
+            with open(self.state_file, encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"[persist] could not read {self.state_file}: {e} — starting fresh")
+            return
+
+        for p in data.get("players", []):
+            self.players[p["device_id"]] = Player(
+                device_id=p["device_id"],
+                name=p["name"],
+                score=p.get("score", 0),
+                streak=p.get("streak", 0),
+                online=False,  # everyone is offline until they reconnect
+            )
+        self.gs.question_index = data.get("question_index", 0)
+        self.gs.question_id    = data.get("question_id", 0)
+        print(
+            f"[persist] restored {len(self.players)} player(s) from '{self.state_file}'"
+            f" — resuming at question {self.gs.question_index + 1}/{len(self.questions)}"
+        )
+
+    def _save_state(self) -> None:
+        data = {
+            "saved_at":       time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "state":          self.gs.state,
+            "question_index": self.gs.question_index,
+            "question_id":    self.gs.question_id,
+            "players": [
+                {"device_id": p.device_id, "name": p.name, "score": p.score, "streak": p.streak}
+                for p in self.players.values()
+            ],
+        }
+        tmp = self.state_file + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            os.replace(tmp, self.state_file)
+        except OSError as e:
+            print(f"[persist] failed to save state: {e}")
 
     # ── MQTT callbacks ────────────────────────────────────────────────────────
 
@@ -105,7 +215,10 @@ class GameMaster:
         self._publish_players()
 
     def _on_disconnect(self, client, userdata, flags, reason_code, properties):
-        print(f"[broker] disconnected (rc={reason_code}), reconnecting …")
+        if reason_code == 0:
+            print("[broker] disconnected cleanly")
+        else:
+            print(f"[broker] lost connection (rc={reason_code}), reconnecting with backoff …")
 
     def _on_message(self, client, userdata, msg: mqtt.MQTTMessage):
         topic   = msg.topic
@@ -260,6 +373,7 @@ class GameMaster:
         q_type  = q.get("type", "mcq")
         payload: dict = {
             "id":           self.gs.question_id,
+            "total":        len(self.questions),
             "type":         q_type,
             "text":         q["text"],
             "time_limit_s": q["time_limit_s"],
@@ -540,6 +654,7 @@ class GameMaster:
         print(f"[scores] {scoreboard}")
 
         self.gs.question_index += 1
+        self._save_state()
         if self.gs.question_index < len(self.questions):
             self._set_timer(5, self._transition_to_question)
         else:
@@ -548,6 +663,7 @@ class GameMaster:
     def _transition_to_ended(self):
         self.gs.state = "ENDED"
         self._publish_state()
+        self._save_state()
         print("[game] ended")
 
     def restart_game(self):
@@ -566,6 +682,7 @@ class GameMaster:
         print("[game] restarted — back to WAITING")
         self._publish_state()
         self._publish_players()
+        self._save_state()
 
     # ── Timer helpers ─────────────────────────────────────────────────────────
 
@@ -579,9 +696,6 @@ class GameMaster:
     # ── Run ───────────────────────────────────────────────────────────────────
 
     def run(self):
-        self.client.connect(self.broker, self.port, keepalive=60)
-        self.client.loop_start()
-
         print("AALeC Quiz — Game Master")
         print(f"  Broker   : {self.broker}:{self.port}")
         print(f"  Questions: {len(self.questions)}")
@@ -590,14 +704,19 @@ class GameMaster:
         print("Press Ctrl+C to quit.")
 
         try:
-            while True:
-                time.sleep(1)
+            self.client.connect(self.broker, self.port, keepalive=60)
+        except (OSError, ConnectionRefusedError) as e:
+            print(f"[broker] initial connection failed ({e}) — will retry automatically …")
+
+        try:
+            # loop_forever blocks and handles reconnection on unexpected disconnects.
+            # retry_first_connection=True also covers a failed initial connect().
+            self.client.loop_forever(retry_first_connection=True)
         except KeyboardInterrupt:
             pass
 
         if self._timer:
             self._timer.cancel()
-        self.client.loop_stop()
         self.client.disconnect()
         print("Bye.")
 
@@ -606,15 +725,27 @@ class GameMaster:
 
 def main():
     parser = argparse.ArgumentParser(description="AALeC Quiz Game Master")
-    parser.add_argument("--broker",    default="localhost",      help="MQTT broker host")
-    parser.add_argument("--port",      default=1883, type=int,   help="MQTT broker port")
-    parser.add_argument("--questions", default="questions.json", help="Path to questions JSON")
+    parser.add_argument("--broker",     default="localhost",       help="MQTT broker host")
+    parser.add_argument("--port",       default=1883, type=int,    help="MQTT broker port")
+    parser.add_argument("--questions",  default="questions.json",  help="Path to questions JSON")
+    parser.add_argument("--state-file", default="game_state.json", help="Path to persisted game state")
     args = parser.parse_args()
 
-    with open(args.questions, encoding="utf-8") as f:
-        questions = json.load(f)
+    try:
+        with open(args.questions, encoding="utf-8") as f:
+            questions = json.load(f)
+    except FileNotFoundError:
+        sys.exit(f"ERROR: questions file not found: {args.questions!r}")
+    except json.JSONDecodeError as e:
+        sys.exit(f"ERROR: questions file is not valid JSON: {e}")
 
-    GameMaster(broker=args.broker, port=args.port, questions=questions).run()
+    validate_questions(questions)
+    GameMaster(
+        broker=args.broker,
+        port=args.port,
+        questions=questions,
+        state_file=args.state_file,
+    ).run()
 
 
 if __name__ == "__main__":

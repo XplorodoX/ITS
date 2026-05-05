@@ -1,0 +1,14 @@
+{
+  "saved_at": "2026-05-05T12:52:13",
+  "state": "WAITING",
+  "question_index": 0,
+  "question_id": 0,
+  "players": [
+    {
+      "device_id": "dev-01",
+      "name": "Alice",
+      "score": 0,
+      "streak": 0
+    }
+  ]
+}

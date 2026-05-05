@@ -90,6 +90,17 @@
   transition: transform 1s linear;
 }
 
+.questionProgress {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2rem;
+  padding: 0.2rem 0.85rem;
+  letter-spacing: 0.04em;
+}
+
 .answerCounter {
   margin-left: auto;
   font-size: 1.1rem;

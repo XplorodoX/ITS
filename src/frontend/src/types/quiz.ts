@@ -16,6 +16,7 @@ export interface GameState {
 
 export interface McqQuestion {
   id: number;
+  total?: number;
   type?: "mcq";
   text: string;
   options: { A: string; B: string; C: string; D: string };
@@ -24,6 +25,7 @@ export interface McqQuestion {
 
 export interface EstimateQuestion {
   id: number;
+  total?: number;
   type: "estimate";
   text: string;
   min: number;
@@ -34,6 +36,7 @@ export interface EstimateQuestion {
 
 export interface HigherLowerQuestion {
   id: number;
+  total?: number;
   type: "higher_lower";
   text: string;
   reference: number;
@@ -43,6 +46,7 @@ export interface HigherLowerQuestion {
 
 export interface PotiTargetQuestion {
   id: number;
+  total?: number;
   type: "poti_target";
   text: string;
   target: number;
@@ -52,6 +56,7 @@ export interface PotiTargetQuestion {
 
 export interface TempTargetQuestion {
   id: number;
+  total?: number;
   type: "temp_target";
   text: string;
   target: number;

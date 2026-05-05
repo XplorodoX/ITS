@@ -40,6 +40,9 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
         : qtype === "temp_target" ? "Temperatur-Challenge"
         : "Frage"}
       </span>
+      {question.total != null && (
+        <span className={styles.questionProgress}>{question.id} / {question.total}</span>
+      )}
       {voting && (
         <span className={styles.timerBadge} style={{ "--pct": pct } as React.CSSProperties}>
           {countdown}s

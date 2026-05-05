@@ -422,19 +422,7 @@ void connectMqttAsPlayer() {
 }
 
 // ===== DISPLAY HELPER =====
-// Zeichnet einen kleinen Statuspunkt rechts unten und flusht das Display.
-//   gefüllt  = beim Server registriert
-//   Rahmen   = MQTT verbunden, aber noch kein ACK
-//   nichts   = nicht verbunden
 void displayShow() {
-  if (mqtt.connected()) {
-    aalec.display.setColor(WHITE);
-    if (registeredByServer) {
-      aalec.display.fillRect(122, 57, 5, 5);
-    } else {
-      aalec.display.drawRect(122, 57, 5, 5);
-    }
-  }
   aalec.display.display();
 }
 
@@ -469,14 +457,15 @@ void pulseLEDs(unsigned long t, RgbColor base) {
 
 // ===== VERBINDUNGS-SCREEN =====
 // Zeigt einen einzelnen Animations-Frame — muss wiederholt aufgerufen werden
-int  _connDots = 0, _connSpin = 0;
+int  _connDots = 0;
+//int _connSpin = 0;
 unsigned long _connLast = 0;
 
 void showConnectingFrame() {
   unsigned long now = millis();
   if (now - _connLast < 120) return;
   _connLast = now;
-  _connSpin = (_connSpin + 1) % 8;
+  //_connSpin = (_connSpin + 1) % 8;
   _connDots = (_connDots + 1) % 4;
 
   pulseLEDs(now, c_blue);
@@ -490,7 +479,7 @@ void showConnectingFrame() {
   String dotStr = "Verbinde";
   for (int i = 0; i < _connDots; i++) dotStr += ".";
   aalec.display.drawString(4, 18, dotStr);
-  drawSpinner(112, 24, 6, _connSpin);
+  //drawSpinner(112, 24, 6, _connSpin);
   aalec.display.drawString(4, 33, ">" + String(apSSID));
   // display() wird vom Aufrufer gemacht, damit Countdown-Text noch ergänzt werden kann
 }
@@ -612,7 +601,7 @@ void showNameSelect() {
 
 // ===== WARTE-SCREEN =====
 void showWaiting() {
-  int spinFrame = 0;
+  //int spinFrame = 0;
   unsigned long lastUpdate = 0;
   unsigned long nameResetHoldStart = 0;
   bool waitForButtonReleaseAfterReset = false;
@@ -661,7 +650,7 @@ void showWaiting() {
     unsigned long now = millis();
     if (now - lastUpdate < 80) { delay(10); continue; }
     lastUpdate = now;
-    spinFrame  = (spinFrame + 1) % 8;
+    //spinFrame  = (spinFrame + 1) % 8;
 
     pulseLEDs(now, c_cyan);
 
@@ -674,7 +663,7 @@ void showWaiting() {
     aalec.display.drawString(64, 16, "Bereit!");
     aalec.display.setFont(ArialMT_Plain_10);
     aalec.display.drawString(64, 35, "Warte auf Quiz...");
-    drawSpinner(64, 54, 5, spinFrame);
+    //drawSpinner(64, 54, 5, spinFrame);
     aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
     aalec.display.drawString(0, 54, isHosting ? "[HOST]" : "[CLIENT]");
     // Dezent aktuellen Namen unten rechts anzeigen
@@ -887,8 +876,8 @@ void showPotiTarget() {
     aalec.display.fillRect(2, 54, barW, 8);
 
     // Zielmarkierung auf dem Balken
-    int targetX = map(potiTarget, 0, 100, 2, 126);
-    aalec.display.drawLine(targetX, 52, targetX, 64);
+    //int targetX = map(potiTarget, 0, 100, 2, 126);
+    //aalec.display.drawLine(targetX, 52, targetX, 64);
 
     displayShow();
   }
@@ -1059,7 +1048,7 @@ void showVoting() {
 
 // ===== ABGESTIMMT-WARTE-SCREEN =====
 void showVoted() {
-  int spinFrame = 0;
+  //int spinFrame = 0;
   unsigned long lastUpdate = 0;
 
   while (quizState == STATE_VOTED) {
@@ -1086,7 +1075,7 @@ void showVoted() {
     unsigned long now = millis();
     if (now - lastUpdate < 80) { delay(10); continue; }
     lastUpdate = now;
-    spinFrame  = (spinFrame + 1) % 8;
+    //spinFrame  = (spinFrame + 1) % 8;
 
     aalec.display.clear();
     aalec.display.setFont(ArialMT_Plain_10);
@@ -1112,7 +1101,7 @@ void showVoted() {
 
     aalec.display.setFont(ArialMT_Plain_10);
     aalec.display.drawString(64, 35, "Warte auf Ergebnis...");
-    drawSpinner(64, 50, 5, spinFrame);
+    //drawSpinner(64, 50, 5, spinFrame);
     displayShow();
   }
 }
@@ -1229,7 +1218,7 @@ void showReveal() {
 
 // ===== QUIZ ENDE =====
 void showEnded() {
-  int spinFrame  = 0;
+  //int spinFrame  = 0;
   unsigned long lastUpdate = 0;
 
   // Goldene LEDs für Gewinner-Atmosphäre
@@ -1245,7 +1234,7 @@ void showEnded() {
     unsigned long now = millis();
     if (now - lastUpdate < 80) { delay(10); continue; }
     lastUpdate = now;
-    spinFrame  = (spinFrame + 1) % 8;
+    //spinFrame  = (spinFrame + 1) % 8;
 
     aalec.display.clear();
     aalec.display.setFont(ArialMT_Plain_10);

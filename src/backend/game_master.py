@@ -14,14 +14,18 @@ State machine:
 
 import argparse
 import json
+import logging
 import os
+import re
 import sys
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 import paho.mqtt.client as mqtt
+from flask import Flask, jsonify, request, current_app
 
 # ── Topics ────────────────────────────────────────────────────────────────────
 T_STATE        = "quiz/state"
@@ -59,30 +63,25 @@ ESTIMATE_TIERS = [
 VALID_TYPES = {"mcq", "estimate", "higher_lower", "poti_target", "temp_target"}
 
 
-def validate_questions(questions: list[dict]) -> None:
-    """Check question list for missing/invalid fields. Exits with a clear error message."""
-    if not questions:
-        sys.exit("ERROR: questions file is empty — need at least one question.")
-
+def _collect_question_errors(questions: list[dict]) -> list[str]:
+    """Return validation error strings. Empty list = valid. Never calls sys.exit."""
     errors: list[str] = []
-
+    if not questions:
+        return ["questions list is empty — need at least one question"]
     for i, q in enumerate(questions):
         label  = f"  question {i + 1}"
         q_type = q.get("type", "mcq")
-
         if q_type not in VALID_TYPES:
             errors.append(
                 f"{label}: unknown type {q_type!r}"
                 f" (valid: {', '.join(sorted(VALID_TYPES))})"
             )
             continue
-
         missing: list[str] = []
         if "text" not in q:
             missing.append("text")
         if "time_limit_s" not in q:
             missing.append("time_limit_s")
-
         if q_type == "mcq":
             opts = q.get("options", {})
             if not isinstance(opts, dict) or set(opts.keys()) != {"A", "B", "C", "D"}:
@@ -102,17 +101,98 @@ def validate_questions(questions: list[dict]) -> None:
         elif q_type in ("poti_target", "temp_target"):
             if "target" not in q:
                 missing.append("target")
-
         if missing:
             errors.append(f"{label} (type={q_type!r}): missing/invalid: {', '.join(missing)}")
+    return errors
 
+
+def validate_questions(questions: list[dict]) -> None:
+    """Validate question list at startup. Exits with a clear message on failure."""
+    errors = _collect_question_errors(questions)
     if errors:
-        print("ERROR: question file validation failed:")
+        print("ERROR: question validation failed:")
         for e in errors:
             print(e)
         sys.exit(1)
-
     print(f"[questions] {len(questions)} question(s) validated OK")
+
+
+# ── Admin REST API ─────────────────────────────────────────────────────────────
+
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+_flask_app = Flask(__name__)
+
+
+@_flask_app.after_request
+def _add_cors(response):
+    response.headers.update({
+        "Access-Control-Allow-Origin":  "*",
+        "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    })
+    return response
+
+
+@_flask_app.route("/api/question-sets", methods=["GET", "OPTIONS"])
+def _api_list_sets():
+    if request.method == "OPTIONS":
+        return "", 204
+    return jsonify(current_app.config["gm"]._scan_question_sets())
+
+
+@_flask_app.route("/api/question-sets/<name>", methods=["GET", "PUT", "DELETE", "OPTIONS"])
+def _api_question_set(name: str):
+    if request.method == "OPTIONS":
+        return "", 204
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+        return jsonify({"error": "invalid name"}), 400
+    gm   = current_app.config["gm"]
+    path = Path(gm.questions_dir) / f"{name}.json"
+
+    if request.method == "GET":
+        if not path.exists():
+            return jsonify({"error": "not found"}), 404
+        return jsonify(json.loads(path.read_text(encoding="utf-8")))
+
+    if request.method == "PUT":
+        qs = request.get_json(silent=True)
+        if not isinstance(qs, list):
+            return jsonify({"error": "body must be a JSON array"}), 400
+        errs = _collect_question_errors(qs)
+        if errs:
+            return jsonify({"errors": errs}), 422
+        tmp = str(path) + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(qs, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, str(path))
+        gm._publish_question_sets()
+        return jsonify({"ok": True, "count": len(qs)})
+
+    if request.method == "DELETE":
+        if not path.exists():
+            return jsonify({"error": "not found"}), 404
+        if name == gm.active_set:
+            return jsonify({"error": "cannot delete the active set"}), 409
+        path.unlink()
+        gm._publish_question_sets()
+        return jsonify({"ok": True})
+
+
+@_flask_app.route("/api/active-set", methods=["GET", "POST", "OPTIONS"])
+def _api_active_set():
+    if request.method == "OPTIONS":
+        return "", 204
+    gm = current_app.config["gm"]
+    if request.method == "GET":
+        return jsonify({"active": gm.active_set})
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", ""))
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+        return jsonify({"error": "invalid name"}), 400
+    err = gm.load_set(name)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"ok": True, "active": gm.active_set})
 
 
 @dataclass
@@ -134,15 +214,27 @@ class GameState:
 
 
 class GameMaster:
-    def __init__(self, broker: str, port: int, questions: list[dict], state_file: str = "game_state.json"):
-        self.broker     = broker
-        self.port       = port
-        self.questions  = questions
-        self.state_file = state_file
+    def __init__(
+        self,
+        broker: str,
+        port: int,
+        questions: list[dict],
+        state_file: str    = "game_state.json",
+        questions_dir: str = ".",
+        active_set: str    = "questions",
+        api_port: int      = 8080,
+    ):
+        self.broker        = broker
+        self.port          = port
+        self.questions     = questions
+        self.state_file    = state_file
+        self.questions_dir = questions_dir
+        self.active_set    = active_set
+        self.api_port      = api_port
         self.players: dict[str, Player] = {}
-        self.gs         = GameState()
+        self.gs            = GameState()
         self._timer: Optional[threading.Timer] = None
-        self._lock      = threading.Lock()
+        self._lock         = threading.Lock()
 
         self._load_persisted_state()
 
@@ -151,6 +243,65 @@ class GameMaster:
         self.client.on_connect    = self._on_connect
         self.client.on_message    = self._on_message
         self.client.on_disconnect = self._on_disconnect
+
+    # ── Question sets ─────────────────────────────────────────────────────────
+
+    def _scan_question_sets(self) -> list[dict]:
+        sets = []
+        try:
+            for path in sorted(Path(self.questions_dir).glob("*.json")):
+                try:
+                    qs = json.loads(path.read_text(encoding="utf-8"))
+                    if not isinstance(qs, list):
+                        continue  # skip non-array files (e.g. game_state.json)
+                    sets.append({
+                        "name":   path.stem,
+                        "count":  len(qs),
+                        "active": path.stem == self.active_set,
+                    })
+                except Exception:
+                    pass
+        except OSError:
+            pass
+        return sets
+
+    def _publish_question_sets(self) -> None:
+        self._publish("quiz/question_sets", {
+            "sets":   self._scan_question_sets(),
+            "active": self.active_set,
+        }, retain=True)
+
+    def load_set(self, name: str) -> str | None:
+        """Switch to a different question set. Returns an error string or None on success."""
+        if self.gs.state != "WAITING":
+            return f"cannot switch set in {self.gs.state} state"
+        path = Path(self.questions_dir) / f"{name}.json"
+        if not path.exists():
+            return f"set {name!r} not found"
+        try:
+            qs = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            return f"could not load {name!r}: {e}"
+        errs = _collect_question_errors(qs)
+        if errs:
+            return f"validation error: {errs[0]}"
+        self.questions  = qs
+        self.active_set = name
+        print(f"[questions] switched to {name!r} ({len(qs)} questions)")
+        self._publish_question_sets()
+        return None
+
+    def _start_api_server(self) -> None:
+        _flask_app.config["gm"] = self
+        t = threading.Thread(
+            target=lambda: _flask_app.run(
+                host="0.0.0.0", port=self.api_port,
+                debug=False, use_reloader=False, threaded=True,
+            ),
+            daemon=True,
+        )
+        t.start()
+        print(f"[api] admin API on http://0.0.0.0:{self.api_port}")
 
     # ── Persistence ───────────────────────────────────────────────────────────
 
@@ -213,6 +364,7 @@ class GameMaster:
         client.subscribe(T_NAMELIST_SET)
         self._publish_state()
         self._publish_players()
+        self._publish_question_sets()
 
     def _on_disconnect(self, client, userdata, flags, reason_code, properties):
         if reason_code == 0:
@@ -283,6 +435,11 @@ class GameMaster:
         elif action == "reset_names":
             print("[control] device name reset requested via MQTT")
             self._publish(T_NAME_RESET, {"reset": True, "source": "beamer"})
+        elif action == "load_set":
+            name = str(data.get("name", ""))
+            err  = self.load_set(name)
+            if err:
+                print(f"[control] load_set failed: {err}")
 
     def _handle_namelist(self, data: dict):
         """Relay the name list from the frontend to all devices (retained)."""
@@ -696,6 +853,7 @@ class GameMaster:
     # ── Run ───────────────────────────────────────────────────────────────────
 
     def run(self):
+        self._start_api_server()
         print("AALeC Quiz — Game Master")
         print(f"  Broker   : {self.broker}:{self.port}")
         print(f"  Questions: {len(self.questions)}")
@@ -725,17 +883,23 @@ class GameMaster:
 
 def main():
     parser = argparse.ArgumentParser(description="AALeC Quiz Game Master")
-    parser.add_argument("--broker",     default="localhost",       help="MQTT broker host")
-    parser.add_argument("--port",       default=1883, type=int,    help="MQTT broker port")
-    parser.add_argument("--questions",  default="questions.json",  help="Path to questions JSON")
-    parser.add_argument("--state-file", default="game_state.json", help="Path to persisted game state")
+    parser.add_argument("--broker",        default="localhost",       help="MQTT broker host")
+    parser.add_argument("--port",          default=1883,  type=int,   help="MQTT broker port")
+    parser.add_argument("--questions",     default="questions.json",  help="Path to questions JSON file")
+    parser.add_argument("--questions-dir", default=None,              help="Directory of question-set JSON files (default: same dir as --questions)")
+    parser.add_argument("--state-file",    default="game_state.json", help="Path to persisted game state")
+    parser.add_argument("--api-port",      default=8080,  type=int,   help="Admin REST API port")
     args = parser.parse_args()
 
+    q_path        = Path(args.questions)
+    questions_dir = args.questions_dir if args.questions_dir else str(q_path.parent or ".")
+    active_set    = q_path.stem
+
     try:
-        with open(args.questions, encoding="utf-8") as f:
+        with open(q_path, encoding="utf-8") as f:
             questions = json.load(f)
     except FileNotFoundError:
-        sys.exit(f"ERROR: questions file not found: {args.questions!r}")
+        sys.exit(f"ERROR: questions file not found: {str(q_path)!r}")
     except json.JSONDecodeError as e:
         sys.exit(f"ERROR: questions file is not valid JSON: {e}")
 
@@ -745,6 +909,9 @@ def main():
         port=args.port,
         questions=questions,
         state_file=args.state_file,
+        questions_dir=questions_dir,
+        active_set=active_set,
+        api_port=args.api_port,
     ).run()
 
 

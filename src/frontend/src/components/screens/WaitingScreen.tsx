@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import type { LobbyPlayer } from "@/types/quiz";
+import type { LobbyPlayer, QuestionSets } from "@/types/quiz";
 import styles from "./screens.module.css";
 import lobbyStyles from "./LobbyScreen.module.css";
 
@@ -9,12 +9,14 @@ interface Props {
   players: LobbyPlayer[];
   minPlayers: number;
   gameState: string;
+  questionSets: QuestionSets | null;
   onStart: () => void;
   onSendNameList: (names: string[]) => void;
   onResetNames: () => void;
+  onLoadSet: (name: string) => void;
 }
 
-export default function WaitingScreen({ players, minPlayers, gameState, onStart, onSendNameList, onResetNames }: Props) {
+export default function WaitingScreen({ players, minPlayers, gameState, questionSets, onStart, onSendNameList, onResetNames, onLoadSet }: Props) {
   const onlineCount = players.filter((p) => p.online).length;
   const missing     = Math.max(0, minPlayers - onlineCount);
   const canStart    = gameState === "WAITING" && missing === 0;
@@ -114,6 +116,33 @@ export default function WaitingScreen({ players, minPlayers, gameState, onStart,
           >
             Namen auf Geraeten zuruecksetzen
           </button>
+        </div>
+      )}
+
+      {/* ── Fragen-Set ── */}
+      {gameState === "WAITING" && questionSets && (
+        <div className={lobbyStyles.setSelector}>
+          <p className={lobbyStyles.nameListTitle}>
+            Fragen-Set:
+            <strong style={{ marginLeft: "0.5rem", color: "var(--accent)" }}>
+              {questionSets.active}
+            </strong>
+          </p>
+          {questionSets.sets.length > 1 && (
+            <div className={lobbyStyles.setChips}>
+              {questionSets.sets.map(s => (
+                <button
+                  key={s.name}
+                  className={`${lobbyStyles.setChip} ${s.active ? lobbyStyles.setChipActive : ""}`}
+                  onClick={() => !s.active && onLoadSet(s.name)}
+                  disabled={s.active}
+                >
+                  {s.name}
+                  <span className={lobbyStyles.setChipCount}>{s.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import mqtt, { MqttClient } from "mqtt";
-import type { GameState, Question, Reveal, Scores, AnswerCount, Players } from "@/types/quiz";
+import type { GameState, Question, Reveal, Scores, AnswerCount, Players, QuestionSets } from "@/types/quiz";
 
 export interface QuizData {
   gameState: GameState | null;
@@ -11,6 +11,7 @@ export interface QuizData {
   scores: Scores | null;
   answerCount: AnswerCount | null;
   players: Players | null;
+  questionSets: QuestionSets | null;
   connected: boolean;
   publish: (topic: string, payload: object) => void;
 }
@@ -26,8 +27,9 @@ export function useMqtt(): QuizData {
   const [question,  setQuestion]      = useState<Question | null>(null);
   const [reveal,    setReveal]        = useState<Reveal | null>(null);
   const [scores,    setScores]        = useState<Scores | null>(null);
-  const [answerCount, setAnswerCount] = useState<AnswerCount | null>(null);
-  const [players,   setPlayers]       = useState<Players | null>(null);
+  const [answerCount,   setAnswerCount]   = useState<AnswerCount | null>(null);
+  const [players,       setPlayers]       = useState<Players | null>(null);
+  const [questionSets,  setQuestionSets]  = useState<QuestionSets | null>(null);
 
   useEffect(() => {
     const client = mqtt.connect(BROKER_WS_URL);
@@ -42,6 +44,7 @@ export function useMqtt(): QuizData {
         "quiz/scores",
         "quiz/answer_count",
         "quiz/players",
+        "quiz/question_sets",
       ]);
     });
 
@@ -55,8 +58,9 @@ export function useMqtt(): QuizData {
         if (topic === "quiz/question")     setQuestion(data);
         if (topic === "quiz/reveal")       setReveal(data);
         if (topic === "quiz/scores")       setScores(data);
-        if (topic === "quiz/answer_count") setAnswerCount(data);
-        if (topic === "quiz/players")      setPlayers(data);
+        if (topic === "quiz/answer_count")   setAnswerCount(data);
+        if (topic === "quiz/players")        setPlayers(data);
+        if (topic === "quiz/question_sets")  setQuestionSets(data);
       } catch {
         // malformed message — ignore
       }
@@ -69,5 +73,5 @@ export function useMqtt(): QuizData {
     clientRef.current?.publish(topic, JSON.stringify(payload));
   };
 
-  return { connected, gameState, question, reveal, scores, answerCount, players, publish };
+  return { connected, gameState, question, reveal, scores, answerCount, players, questionSets, publish };
 }

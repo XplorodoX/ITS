@@ -28,3 +28,16 @@ services:
       - "--questions"
       - "${QUESTIONS:-questions.json}"
     restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./src/frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    environment:
+      - NEXT_PUBLIC_MQTT_BROKER=mosquitto
+      - NEXT_PUBLIC_MQTT_PORT=9001
+    restart: unless-stopped

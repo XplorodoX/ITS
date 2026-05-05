@@ -52,13 +52,14 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
   );
 
   if (qtype === "estimate") {
+    const q = question as Extract<typeof question, { type: "estimate" }>;
     return (
       <div className={styles.screen}>
         {header}
-        <h1 className={styles.questionText}>{question.text}</h1>
+        <h1 className={styles.questionText}>{q.text}</h1>
         <div className={styles.estimateHint}>
           <span className={styles.estimateRange}>
-            {question.min} – {question.max}{question.unit ? ` ${question.unit}` : ""}
+            {q.min} – {q.max}{q.unit ? ` ${q.unit}` : ""}
           </span>
           <p className={styles.estimateInstr}>Drehknopf zum Schätzen, Drücken zum Bestätigen</p>
         </div>
@@ -67,13 +68,14 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
   }
 
   if (qtype === "higher_lower") {
+    const q = question as Extract<typeof question, { type: "higher_lower" }>;
     return (
       <div className={styles.screen}>
         {header}
-        <h1 className={styles.questionText}>{question.text}</h1>
+        <h1 className={styles.questionText}>{q.text}</h1>
         <div className={styles.hlReference}>
           <span className={styles.hlValue}>
-            {question.reference}{question.unit ? ` ${question.unit}` : ""}
+            {q.reference}{q.unit ? ` ${q.unit}` : ""}
           </span>
         </div>
         <div className={styles.hlChoices}>

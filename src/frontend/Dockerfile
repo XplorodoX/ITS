@@ -12,6 +12,12 @@ RUN npm ci
 # Copy application code
 COPY . .
 
+# WebSocket URL of the MQTT broker, as seen FROM THE BEAMER'S BROWSER (not from
+# inside the Docker network). NEXT_PUBLIC_* is inlined at build time, so it must
+# be provided here as a build arg — a runtime env var would be ignored.
+ARG NEXT_PUBLIC_MQTT_URL=ws://localhost:9001
+ENV NEXT_PUBLIC_MQTT_URL=$NEXT_PUBLIC_MQTT_URL
+
 # Build the Next.js application
 RUN npm run build
 

@@ -11,7 +11,7 @@ import ScoresScreen   from "@/components/screens/ScoresScreen";
 import styles from "@/components/screens/screens.module.css";
 
 export default function BeamerPage() {
-  const { connected, gameState, question, reveal, scores, answerCount, players, publish } = useMqtt();
+  const { connected, gameState, question, reveal, scores, answerCount, players, questionSets, publish } = useMqtt();
 
   const lobbyPlayers  = players?.players    ?? [];
   const minPlayers    = players?.min_players ?? 2;
@@ -35,14 +35,20 @@ export default function BeamerPage() {
     publish("quiz/control", { action: "reset_names" });
   }, [publish]);
 
+  const handleLoadSet = useCallback((name: string) => {
+    publish("quiz/control", { action: "load_set", name });
+  }, [publish]);
+
   const waitingScreen = (
     <WaitingScreen
       players={lobbyPlayers}
       minPlayers={minPlayers}
       gameState={currentState}
+      questionSets={questionSets}
       onStart={handleStart}
       onSendNameList={handleSendNameList}
       onResetNames={handleResetNames}
+      onLoadSet={handleLoadSet}
     />
   );
 

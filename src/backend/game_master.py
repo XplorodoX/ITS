@@ -13,6 +13,7 @@ State machine:
 """
 
 import argparse
+import functools
 import json
 import logging
 import os
@@ -195,6 +196,25 @@ def _api_active_set():
     return jsonify({"ok": True, "active": gm.active_set})
 
 
+# ── Concurrency helper ──────────────────────────────────────────────────────────
+
+def _locked(method):
+    """Run a GameMaster method while holding ``self._lock``.
+
+    ``self._lock`` is a re-entrant lock (``threading.RLock``), so a ``@_locked``
+    method may freely call other ``@_locked`` methods (e.g. ``start_game`` →
+    ``_transition_to_question``) without dead-locking. This makes every state
+    transition atomic with respect to the MQTT-callback thread, the Flask admin
+    thread, and the ``threading.Timer`` callback threads — all of which touch
+    ``self.gs`` / ``self.gs.answers`` / ``self.players`` / ``self.questions``.
+    """
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
+
 @dataclass
 class Player:
     device_id: str
@@ -234,7 +254,9 @@ class GameMaster:
         self.players: dict[str, Player] = {}
         self.gs            = GameState()
         self._timer: Optional[threading.Timer] = None
-        self._lock         = threading.Lock()
+        # Re-entrant: guards self.gs, self.gs.answers, self.players and
+        # self.questions across the MQTT, Flask and Timer threads. See @_locked.
+        self._lock         = threading.RLock()
 
         self._load_persisted_state()
 
@@ -271,6 +293,7 @@ class GameMaster:
             "active": self.active_set,
         }, retain=True)
 
+    @_locked
     def load_set(self, name: str) -> str | None:
         """Switch to a different question set. Returns an error string or None on success."""
         if self.gs.state != "WAITING":
@@ -394,28 +417,28 @@ class GameMaster:
 
     # ── Device lifecycle ──────────────────────────────────────────────────────
 
+    @_locked
     def _handle_connect(self, topic: str, data: dict):
         device_id = topic.split("/")[-1]
         name      = data.get("name", device_id)
-        with self._lock:
-            if device_id in self.players:
-                self.players[device_id].online = True
-                self.players[device_id].name   = name
-                print(f"[reconnect] {device_id} is back as '{name}'  ({self._online_count()} online)")
-            elif self.gs.state == "WAITING":
-                self.players[device_id] = Player(device_id=device_id, name=name)
-                print(f"[register] {device_id} → '{name}'  ({self._online_count()} online)")
-                self._publish(f"{T_ACK}/{device_id}", {"status": "registered", "name": name})
-            else:
-                print(f"[register] {device_id} ignored — game already running")
+        if device_id in self.players:
+            self.players[device_id].online = True
+            self.players[device_id].name   = name
+            print(f"[reconnect] {device_id} is back as '{name}'  ({self._online_count()} online)")
+        elif self.gs.state == "WAITING":
+            self.players[device_id] = Player(device_id=device_id, name=name)
+            print(f"[register] {device_id} → '{name}'  ({self._online_count()} online)")
+            self._publish(f"{T_ACK}/{device_id}", {"status": "registered", "name": name})
+        else:
+            print(f"[register] {device_id} ignored — game already running")
         self._publish_players()
 
+    @_locked
     def _handle_disconnect(self, topic: str):
         device_id = topic.split("/")[-1]
-        with self._lock:
-            if device_id in self.players:
-                self.players[device_id].online = False
-                print(f"[disconnect] {device_id} offline  ({self._online_count()} online)")
+        if device_id in self.players:
+            self.players[device_id].online = False
+            print(f"[disconnect] {device_id} offline  ({self._online_count()} online)")
         self._publish_players()
 
     def _online_count(self) -> int:
@@ -454,6 +477,7 @@ class GameMaster:
 
     # ── Answer handling ───────────────────────────────────────────────────────
 
+    @_locked
     def _handle_answer(self, topic: str, data: dict):
         if self.gs.state != "VOTING":
             return
@@ -469,8 +493,7 @@ class GameMaster:
 
         self.gs.answers[device_id] = {"answer": answer, "elapsed_ms": elapsed_ms}
         print(f"[answer] {device_id}: {answer}  ({elapsed_ms} ms)")
-        with self._lock:
-            total = self._online_count()
+        total = self._online_count()
         self._publish(T_ANSWER_COUNT, {
             "question_id": self.gs.question_id,
             "count":       len(self.gs.answers),
@@ -502,13 +525,13 @@ class GameMaster:
     def _publish(self, topic: str, payload: dict, retain: bool = False):
         self.client.publish(topic, json.dumps(payload), retain=retain)
 
+    @_locked
     def start_game(self):
         """Advance from WAITING → first QUESTION."""
         if self.gs.state != "WAITING":
             print("[game] already running")
             return
-        with self._lock:
-            online = self._online_count()
+        online = self._online_count()
         if online < MIN_PLAYERS:
             print(f"[game] only {online} player(s) online, need {MIN_PLAYERS}")
             return
@@ -516,6 +539,7 @@ class GameMaster:
         self.gs.question_index = 0
         self._transition_to_question()
 
+    @_locked
     def _transition_to_question(self):
         if self.gs.question_index >= len(self.questions):
             self._transition_to_ended()
@@ -556,6 +580,7 @@ class GameMaster:
 
         self._set_timer(3, self._transition_to_voting)
 
+    @_locked
     def _transition_to_voting(self):
         q = self.questions[self.gs.question_index]
         self.gs.state          = "VOTING"
@@ -564,6 +589,7 @@ class GameMaster:
         print(f"[voting] open for {q['time_limit_s']}s")
         self._set_timer(q["time_limit_s"], self._transition_to_reveal)
 
+    @_locked
     def _finish_voting_early(self):
         if self.gs.state != "VOTING":
             return
@@ -572,14 +598,14 @@ class GameMaster:
             self._timer = None
         self._transition_to_reveal()
 
+    @_locked
     def _transition_to_reveal(self):
         if self.gs.state != "VOTING":
             return
         q            = self.questions[self.gs.question_index]
         q_type       = q.get("type", "mcq")
         time_limit_ms = q["time_limit_s"] * 1000
-        with self._lock:
-            players_snapshot = dict(self.players)
+        players_snapshot = dict(self.players)
 
         # ── mark no-answer players streak=0 ──────────────────────────────────
         for device_id, player in players_snapshot.items():
@@ -797,15 +823,15 @@ class GameMaster:
         })
         print(f"[reveal/temp_target] correct={correct}°C  tolerance=±{tolerance}°C")
 
+    @_locked
     def _transition_to_scores(self):
         self.gs.state = "SCORES"
-        with self._lock:
-            scoreboard = sorted(
-                [{"device_id": p.device_id, "name": p.name, "score": p.score, "streak": p.streak}
-                 for p in self.players.values()],
-                key=lambda x: x["score"],
-                reverse=True,
-            )
+        scoreboard = sorted(
+            [{"device_id": p.device_id, "name": p.name, "score": p.score, "streak": p.streak}
+             for p in self.players.values()],
+            key=lambda x: x["score"],
+            reverse=True,
+        )
         self._publish(T_SCORES, {"scores": scoreboard})
         self._publish_state()
         print(f"[scores] {scoreboard}")
@@ -817,12 +843,14 @@ class GameMaster:
         else:
             self._set_timer(5, self._transition_to_ended)
 
+    @_locked
     def _transition_to_ended(self):
         self.gs.state = "ENDED"
         self._publish_state()
         self._save_state()
         print("[game] ended")
 
+    @_locked
     def restart_game(self):
         """Reset scores and state back to WAITING so a new game can start."""
         if self.gs.state not in ("ENDED", "WAITING"):
@@ -831,10 +859,9 @@ class GameMaster:
         if self._timer:
             self._timer.cancel()
             self._timer = None
-        with self._lock:
-            for p in self.players.values():
-                p.score  = 0
-                p.streak = 0
+        for p in self.players.values():
+            p.score  = 0
+            p.streak = 0
         self.gs = GameState()  # fresh state, question_index=0, question_id=0
         print("[game] restarted — back to WAITING")
         self._publish_state()

@@ -32,12 +32,15 @@ services:
   frontend:
     build:
       context: ./src/frontend
+      args:
+        # WebSocket URL the BEAMER'S BROWSER uses to reach the broker. Baked in
+        # at build time (NEXT_PUBLIC_*). The browser cannot resolve the internal
+        # "mosquitto" service name, so this points at the host-published port.
+        # Override for a remote beamer, e.g. NEXT_PUBLIC_MQTT_URL=ws://192.168.1.50:9001.
+        NEXT_PUBLIC_MQTT_URL: ${NEXT_PUBLIC_MQTT_URL:-ws://localhost:9001}
     ports:
       - "3000:3000"
     depends_on:
       mosquitto:
         condition: service_healthy
-    environment:
-      - NEXT_PUBLIC_MQTT_BROKER=mosquitto
-      - NEXT_PUBLIC_MQTT_PORT=9001
     restart: unless-stopped

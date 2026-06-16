@@ -171,14 +171,18 @@ void showNameSelect() {
 
 void showWaiting() {
   unsigned long lastUpdate = 0;
-  unsigned long nameResetHoldStart = 0;
-  bool waitForButtonReleaseAfterReset = false;
+  int resetState = 0;
+  unsigned long resetTimer = 0;
   unsigned long lastPressedMs = 0;
+  bool waitForButtonReleaseAfterReset = false;
 
   while (quizState == STATE_WAITING) {
     checkConnection();
     mqtt.loop();
-    aalec.button_changed(); // Sync the library button state tracker to prevent ghost clicks later
+    
+    int btn = aalec.get_button();
+    bool changed = aalec.button_changed(); // Sync the library button state tracker to prevent ghost clicks later
+    unsigned long now = millis();
 
     // Kein Name gesetzt -> lokale Namenseingabe anzeigen
     if (strlen(playerName) == 0) {
@@ -193,51 +197,79 @@ void showWaiting() {
       continue;
     }
 
-    // Optionaler Reset: Button 3s halten, dann Namenswahl erneut starten.
+    // Optionaler Reset: Doppel-Klick und beim zweiten Klick 3s gedrückt halten.
     if (strlen(playerName) > 0) {
-      int btnState = aalec.get_button();
-      if (btnState == 1) {
-        static unsigned long lastDebugPrint = 0;
-        if (millis() - lastDebugPrint > 500) {
-          lastDebugPrint = millis();
-          Serial.printf("[DEBUG_BTN] Pressed. holdStart=%lu, elapsed=%lu ms, lastPressedMs=%lu\n", 
-                        nameResetHoldStart, nameResetHoldStart ? (millis() - nameResetHoldStart) : 0, lastPressedMs);
-        }
-      }
-
       if (waitForButtonReleaseAfterReset) {
-        if (btnState == 0) {
+        if (btn == 0) {
           waitForButtonReleaseAfterReset = false;
+          resetState = 0;
           Serial.println("[DEBUG_BTN] waitForButtonReleaseAfterReset cleared");
         }
-      } else if (btnState == 1) {
-        unsigned long now = millis();
-        if (nameResetHoldStart == 0) {
-          nameResetHoldStart = now;
-          Serial.printf("[DEBUG_BTN] Started hold timer at %lu\n", nameResetHoldStart);
-        } else if (now - nameResetHoldStart >= NAME_RESET_HOLD_MS) {
-          Serial.printf("[DEBUG_BTN] Hold timer threshold reached! elapsed=%lu\n", now - nameResetHoldStart);
-          Serial.println("[NAME] Reset per Long-Press");
-          clearNameInEEPROM();
-          waitForButtonReleaseAfterReset = true;
-          nameResetHoldStart = 0;
-          showNameSelect();
-          nameResetRequested = false;
-          continue;
-        }
-        lastPressedMs = now;
       } else {
-        if (millis() - lastPressedMs > 300) { // Increased to 300ms debounce
-          if (nameResetHoldStart != 0) {
-            Serial.printf("[DEBUG_BTN] Released for >300ms. Resetting hold timer. Was active for %lu ms\n", 
-                          millis() - nameResetHoldStart);
+        if (resetState == 0) {
+          if (changed && btn == 1) {
+            resetState = 1;
+            resetTimer = now;
+            lastPressedMs = now;
+            Serial.println("[DEBUG_BTN] RS: Idle -> First Press");
           }
-          nameResetHoldStart = 0;
+        } else if (resetState == 1) {
+          if (btn == 1) {
+            lastPressedMs = now;
+            if (now - resetTimer > 1000) { // Timeout if they hold first click too long
+              resetState = 0;
+              Serial.println("[DEBUG_BTN] RS: First Press -> Idle (Hold timeout)");
+            }
+          } else {
+            if (now - lastPressedMs > 150) { // debounced release of first press
+              if (now - resetTimer < 500) { // quick click
+                resetState = 2;
+                resetTimer = now;
+                Serial.println("[DEBUG_BTN] RS: First Press -> Wait Second");
+              } else {
+                resetState = 0;
+                Serial.println("[DEBUG_BTN] RS: First Press -> Idle (Too slow click)");
+              }
+            }
+          }
+        } else if (resetState == 2) {
+          if (now - resetTimer > 500) { // double click timeout
+            resetState = 0;
+            Serial.println("[DEBUG_BTN] RS: Wait Second -> Idle (Timeout)");
+          } else if (changed && btn == 1) {
+            resetState = 3;
+            resetTimer = now;
+            lastPressedMs = now;
+            Serial.println("[DEBUG_BTN] RS: Wait Second -> Second Hold");
+          }
+        } else if (resetState == 3) {
+          if (btn == 1) {
+            lastPressedMs = now;
+            static unsigned long lastDebugPrint = 0;
+            if (now - lastDebugPrint > 500) {
+              lastDebugPrint = now;
+              Serial.printf("[DEBUG_BTN] Holding second press. elapsed=%lu ms\n", now - resetTimer);
+            }
+            if (now - resetTimer >= NAME_RESET_HOLD_MS) {
+              Serial.printf("[DEBUG_BTN] Threshold reached! Resetting name per double-click + long-press\n");
+              clearNameInEEPROM();
+              waitForButtonReleaseAfterReset = true;
+              resetState = 0;
+              showNameSelect();
+              nameResetRequested = false;
+              continue;
+            }
+          } else {
+            if (now - lastPressedMs > 300) { // debounced release
+              resetState = 0;
+              Serial.println("[DEBUG_BTN] RS: Second Hold -> Idle (Released early)");
+            }
+          }
         }
       }
     }
 
-    unsigned long now = millis();
+    now = millis();
     if (now - lastUpdate < 80) { delay(10); continue; }
     lastUpdate = now;
 

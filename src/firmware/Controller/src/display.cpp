@@ -195,15 +195,28 @@ void showWaiting() {
 
     // Optionaler Reset: Button 3s halten, dann Namenswahl erneut starten.
     if (strlen(playerName) > 0) {
-      if (waitForButtonReleaseAfterReset) {
-        if (aalec.get_button() == 0) {
-          waitForButtonReleaseAfterReset = false;
+      int btnState = aalec.get_button();
+      if (btnState == 1) {
+        static unsigned long lastDebugPrint = 0;
+        if (millis() - lastDebugPrint > 500) {
+          lastDebugPrint = millis();
+          Serial.printf("[DEBUG_BTN] Pressed. holdStart=%lu, elapsed=%lu ms, lastPressedMs=%lu\n", 
+                        nameResetHoldStart, nameResetHoldStart ? (millis() - nameResetHoldStart) : 0, lastPressedMs);
         }
-      } else if (aalec.get_button() == 1) {
+      }
+
+      if (waitForButtonReleaseAfterReset) {
+        if (btnState == 0) {
+          waitForButtonReleaseAfterReset = false;
+          Serial.println("[DEBUG_BTN] waitForButtonReleaseAfterReset cleared");
+        }
+      } else if (btnState == 1) {
         unsigned long now = millis();
         if (nameResetHoldStart == 0) {
           nameResetHoldStart = now;
+          Serial.printf("[DEBUG_BTN] Started hold timer at %lu\n", nameResetHoldStart);
         } else if (now - nameResetHoldStart >= NAME_RESET_HOLD_MS) {
+          Serial.printf("[DEBUG_BTN] Hold timer threshold reached! elapsed=%lu\n", now - nameResetHoldStart);
           Serial.println("[NAME] Reset per Long-Press");
           clearNameInEEPROM();
           waitForButtonReleaseAfterReset = true;
@@ -214,7 +227,11 @@ void showWaiting() {
         }
         lastPressedMs = now;
       } else {
-        if (millis() - lastPressedMs > 150) {
+        if (millis() - lastPressedMs > 300) { // Increased to 300ms debounce
+          if (nameResetHoldStart != 0) {
+            Serial.printf("[DEBUG_BTN] Released for >300ms. Resetting hold timer. Was active for %lu ms\n", 
+                          millis() - nameResetHoldStart);
+          }
           nameResetHoldStart = 0;
         }
       }

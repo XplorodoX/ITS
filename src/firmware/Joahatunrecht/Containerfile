@@ -1,0 +1,13 @@
+# Build environment for this PlatformIO project.
+#
+# Why this exists: the macOS toolchain-xtensa package PlatformIO downloads for
+# ESP8266 (xtensa-lx106-elf) only ships as an x86_64 Mach-O binary, and Apple
+# Silicon Macs no longer have Rosetta 2 to run it. Building inside a native
+# arm64 Linux container sidesteps that entirely — PlatformIO downloads the
+# linux_aarch64 toolchain instead, which runs natively under podman/Docker on
+# Apple Silicon (no emulation).
+FROM python:3.11-slim
+
+RUN pip install --no-cache-dir platformio
+
+WORKDIR /project

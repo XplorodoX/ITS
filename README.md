@@ -68,7 +68,7 @@ Damit du den Code auf den AALeC-Geräten nicht bei jedem Wechsel der IP-Adresse 
 1. Ermittle den lokalen Hostnamen deines Macs im Terminal:
    ```bash
    scutil --get LocalHostName
-   # Beispielausgabe: MacBook-Pro-von-Florian
+   # Beispielausgabe: dein-pc-name.local
    ```
 2. Kopiere die Konfigurationsdatei im Firmware-Ordner:
    ```bash
@@ -76,7 +76,7 @@ Damit du den Code auf den AALeC-Geräten nicht bei jedem Wechsel der IP-Adresse 
    ```
 3. Passe in der neuen `config.h` den Hostnamen an (füge `.local` an deinen Mac-Namen an):
    ```cpp
-   #define MQTT_BROKER   "MacBook-Pro-von-Florian.local"
+   #define MQTT_BROKER   "dein-pc-name.local"
    ```
 
 ### Schritt 2: Docker-Container (Backend, Frontend & Broker) starten

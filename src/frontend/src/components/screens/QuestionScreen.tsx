@@ -4,33 +4,56 @@ import { useEffect, useState } from "react";
 import type { Question, AnswerCount } from "@/types/quiz";
 import styles from "./screens.module.css";
 
+// Antwortoptionen-Labels und zugeordnete Markenfarben
 const LABELS = ["A", "B", "C", "D"] as const;
 const COLORS = ["#6c63ff", "#22c55e", "#eab308", "#ef4444"];
 
 interface Props {
+  /** Die aktuelle Frage (kann MCQ, Schätzfrage, etc. sein) */
   question: Question;
+  /** Die verbleibende Zeit in Sekunden */
   remainingS: number;
+  /** Bestimmt, ob die Abstimmungsphase aktiv ist (Countdown läuft) */
   voting: boolean;
+  /** Statistik der bereits abgegebenen Stimmen */
   answerCount: AnswerCount | null;
 }
 
+/**
+ * QuestionScreen Komponente.
+ *
+ * Zeigt die aktuelle Frage, den Countdown (als Kreis/Badge) und die Antwortfortschritte an.
+ * Unterstützt dynamisch die verschiedenen Fragentypen (Multiple Choice, Schätzen,
+ * Höher/Niedriger, Poti- und Temperatur-Challenge).
+ */
 export default function QuestionScreen({ question, remainingS, voting, answerCount }: Props) {
+  // Lokaler Countdown-State zur flüssigen Sekundendarstellung im Frontend
   const [countdown, setCountdown] = useState(remainingS);
 
+  // Synchronisation des Countdowns bei Statusänderung oder neuer Frage
   useEffect(() => { setCountdown(remainingS); }, [remainingS, question.id]);
 
+  // Sekundengenauer Countdown-Intervall-Timer während der Abstimmungsphase
   useEffect(() => {
     if (!voting) return;
     const id = setInterval(() => {
-      setCountdown(prev => { if (prev <= 1) { clearInterval(id); return 0; } return prev - 1; });
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(id);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
     return () => clearInterval(id);
   }, [voting, question.id]);
 
+  // Prozentsatz für die Visualisierung des Kreistimers
   const pct   = Math.max(0, countdown / question.time_limit_s);
   const count = answerCount?.question_id === question.id ? answerCount : null;
   const qtype = question.type ?? "mcq";
 
+  // Gemeinsamer Header für alle Fragentypen
   const header = (
     <div className={styles.questionHeader}>
       <span className={styles.questionLabel}>
@@ -57,6 +80,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
     </div>
   );
 
+  // ── Layout 1: Schätzfragen (Estimate) ──
   if (qtype === "estimate") {
     const q = question as Extract<typeof question, { type: "estimate" }>;
     return (
@@ -65,7 +89,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
         <h1 className={styles.questionText}>{q.text}</h1>
         <div className={styles.estimateHint}>
           <span className={styles.estimateRange}>
-            {q.min} – {q.max}{q.unit ? ` ${q.unit}` : ""}
+            Bereich: {q.min} – {q.max}{q.unit ? ` ${q.unit}` : ""}
           </span>
           <p className={styles.estimateInstr}>Drehknopf zum Schätzen, Drücken zum Bestätigen</p>
         </div>
@@ -73,6 +97,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
     );
   }
 
+  // ── Layout 2: Höher / Niedriger (Higher / Lower) ──
   if (qtype === "higher_lower") {
     const q = question as Extract<typeof question, { type: "higher_lower" }>;
     return (
@@ -81,7 +106,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
         <h1 className={styles.questionText}>{q.text}</h1>
         <div className={styles.hlReference}>
           <span className={styles.hlValue}>
-            {q.reference}{q.unit ? ` ${q.unit}` : ""}
+            Referenz: {q.reference}{q.unit ? ` ${q.unit}` : ""}
           </span>
         </div>
         <div className={styles.hlChoices}>
@@ -92,6 +117,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
     );
   }
 
+  // ── Layout 3: Poti-Zielwert Challenge (Poti Target) ──
   if (qtype === "poti_target") {
     const q = question as Extract<typeof question, { type: "poti_target" }>;
     return (
@@ -109,6 +135,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
     );
   }
 
+  // ── Layout 4: Temperatur-Zielwert Challenge (Temp Target) ──
   if (qtype === "temp_target") {
     const q = question as Extract<typeof question, { type: "temp_target" }>;
     return (
@@ -126,7 +153,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
     );
   }
 
-  // Default: MCQ
+  // ── Layout 5: Standard Multiple-Choice-Fragen (MCQ) ──
   return (
     <div className={styles.screen}>
       {header}

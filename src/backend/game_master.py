@@ -1,14 +1,18 @@
 """
 AALeC Quiz — Game Master (MQTT Backend)
 
+Dieses Modul steuert den zentralen Zustandsautomaten (State Machine) des Quizspiels.
+Es verwaltet die angemeldeten Spieler, nimmt Antworten entgegen, berechnet die Punkte,
+kommuniziert über MQTT mit den Controllern/Frontends und bietet eine REST-API zur Fragenset-Verwaltung.
+
 Usage:
     uv run game_master.py --broker localhost --questions questions.json
 
-State machine:
+State Machine Ablauf:
     WAITING ──► QUESTION ──► VOTING ──► REVEAL ──► SCORES
                    ▲                                  │
-                   └──────────── (next question) ◄────┘
-                                                      │ (last question)
+                   └──────────── (nächste Frage) ◄────┘
+                                                      │ (letzte Frage vorbei)
                                                    ENDED
 """
 
@@ -28,44 +32,51 @@ from typing import Optional
 import paho.mqtt.client as mqtt
 from flask import Flask, jsonify, request, current_app
 
-# ── Topics ────────────────────────────────────────────────────────────────────
-T_STATE        = "quiz/state"
-T_QUESTION     = "quiz/question"
-T_REVEAL       = "quiz/reveal"
-T_SCORES       = "quiz/scores"
-T_PLAYERS      = "quiz/players"       # lobby player list (online/offline)
-T_ACK          = "quiz/ack"           # registration confirmed → quiz/ack/<device_id>
-T_ANSWER_COUNT = "quiz/answer_count"  # live counter for beamer
-T_ANSWER       = "quiz/answer/#"      # subscribe pattern
-T_CONNECT      = "quiz/connect/#"     # subscribe pattern
-T_DISCONNECT   = "quiz/disconnect/#"  # subscribe pattern (LWT)
-T_CONTROL      = "quiz/control"       # start command from frontend
-T_NAMELIST     = "quiz/namelist"      # name list for devices
-T_NAMELIST_SET = "quiz/namelist/set"  # name list from frontend
-T_NAME_RESET   = "quiz/name/reset"    # reset command for device-side name selection
+# ── MQTT Topics ───────────────────────────────────────────────────────────────
+T_STATE        = "quiz/state"         # Veröffentlicht den aktuellen Zustand (retained)
+T_QUESTION     = "quiz/question"      # Veröffentlicht den Fragentext und Typ für Beamer & Controller
+T_REVEAL       = "quiz/reveal"        # Veröffentlicht das richtige Ergebnis & die Antwortstatistiken
+T_SCORES       = "quiz/scores"        # Veröffentlicht das aktuelle Leaderboard
+T_PLAYERS      = "quiz/players"       # Veröffentlicht die Liste der verbundenen Spieler (retained)
+T_ACK          = "quiz/ack"           # Bestätigungston / Registrierungs-Ack für Controller
+T_ANSWER_COUNT = "quiz/answer_count"  # Live-Zähler abgegebener Stimmen (für Beamer)
+T_ANSWER       = "quiz/answer/#"      # Subskriptions-Pattern für Antworten der Controller
+T_CONNECT      = "quiz/connect/#"     # Subskriptions-Pattern für Verbindungsanfragen der Controller
+T_DISCONNECT   = "quiz/disconnect/#"  # Subskriptions-Pattern für Last-Will-Meldungen bei Verbindungsverlust
+T_CONTROL      = "quiz/control"       # Steuerbefehle (Start, Restart, etc.) vom Frontend
+T_NAMELIST     = "quiz/namelist"      # Liste verfügbarer Namen für Controller-Displays (retained)
+T_NAMELIST_SET = "quiz/namelist/set"  # Setzen der Namensliste durch das Admin-Frontend
+T_NAME_RESET   = "quiz/name/reset"    # Befehl zum Zurücksetzen der manuellen Namenswahl
 
-MIN_PLAYERS = 1
+MIN_PLAYERS = 1  # Mindestanzahl Spieler, um das Quiz zu starten
 
-# ── Scoring constants ─────────────────────────────────────────────────────────
-BASE_SCORE           = 1000
-TIME_BONUS           = 500
-STREAK_BONUS_PER_LVL = 200   # extra points per consecutive correct answer
-MAX_STREAK_LEVELS    = 3      # cap at level 3 → max +600
+# ── Punkteberechnung Konstanten ────────────────────────────────────────────────
+BASE_SCORE           = 1000  # Basispunkte für eine korrekte Antwort
+TIME_BONUS           = 500   # Maximaler Zeitbonus (fällt linear mit verstreichender Zeit ab)
+STREAK_BONUS_PER_LVL = 200   # Zusatzpunkte pro Stufe einer ununterbrochenen Streak (consecutive correct)
+MAX_STREAK_LEVELS    = 3     # Maximales Streak-Level (d.h. max. +600 Punkte)
 
-# Estimate: tiered score by relative error  (|guess - correct| / range)
+# Schätzfragen-Bewertung gestaffelt nach relativem Fehler: (|Schätzung - Richtig| / Bereich)
 ESTIMATE_TIERS = [
-    (0.00, 1000),  # exact (≤0%)
-    (0.05,  800),  # within 5 % of range
-    (0.10,  600),  # within 10 %
-    (0.20,  400),  # within 20 %
-    (0.30,  200),  # within 30 %
-]                  # beyond 30 % → 0 points
+    (0.00, 1000),  # Exakt getroffen (<= 0% Abweichung)
+    (0.05,  800),  # Innerhalb von 5% des Gesamtbereichs
+    (0.10,  600),  # Innerhalb von 10%
+    (0.20,  400),  # Innerhalb von 20%
+    (0.30,  200),  # Innerhalb von 30%
+]                  # Mehr als 30% Abweichung ergibt 0 Punkte
 
 VALID_TYPES = {"mcq", "estimate", "higher_lower", "poti_target", "temp_target"}
 
 
 def _collect_question_errors(questions: list[dict]) -> list[str]:
-    """Return validation error strings. Empty list = valid. Never calls sys.exit."""
+    """Überprüft die geladene Fragenliste auf strukturelle und inhaltliche Fehler.
+
+    Args:
+        questions: Eine Liste von Dictionaries, die die Fragen repräsentieren.
+
+    Returns:
+        Eine Liste von Fehlermeldungen als Strings. Eine leere Liste bedeutet, dass alles gültig ist.
+    """
     errors: list[str] = []
     if not questions:
         return ["questions list is empty — need at least one question"]
@@ -83,6 +94,8 @@ def _collect_question_errors(questions: list[dict]) -> list[str]:
             missing.append("text")
         if "time_limit_s" not in q:
             missing.append("time_limit_s")
+
+        # Typspezifische Validierung
         if q_type == "mcq":
             opts = q.get("options", {})
             if not isinstance(opts, dict) or set(opts.keys()) != {"A", "B", "C", "D"}:
@@ -108,7 +121,10 @@ def _collect_question_errors(questions: list[dict]) -> list[str]:
 
 
 def validate_questions(questions: list[dict]) -> None:
-    """Validate question list at startup. Exits with a clear message on failure."""
+    """Validiert die übergebene Fragenliste beim Startup des Game Masters.
+
+    Beendet das Programm mit Exit-Code 1, falls Fehler gefunden werden.
+    """
     errors = _collect_question_errors(questions)
     if errors:
         print("ERROR: question validation failed:")
@@ -118,14 +134,15 @@ def validate_questions(questions: list[dict]) -> None:
     print(f"[questions] {len(questions)} question(s) validated OK")
 
 
-# ── Admin REST API ─────────────────────────────────────────────────────────────
+# ── Admin REST API ────────────────────────────────────────────────────────────
 
-logging.getLogger("werkzeug").setLevel(logging.ERROR)
+logging.getLogger("werkzeug").setLevel(logging.ERROR)  # Flask-Konsole bereinigen
 _flask_app = Flask(__name__)
 
 
 @_flask_app.after_request
 def _add_cors(response):
+    """Fügt CORS-Header hinzu, um Zugriffe vom Frontend-Port zu erlauben."""
     response.headers.update({
         "Access-Control-Allow-Origin":  "*",
         "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
@@ -136,6 +153,7 @@ def _add_cors(response):
 
 @_flask_app.route("/api/question-sets", methods=["GET", "OPTIONS"])
 def _api_list_sets():
+    """Gibt die Liste aller Fragensets im Verzeichnis zurück."""
     if request.method == "OPTIONS":
         return "", 204
     return jsonify(current_app.config["gm"]._scan_question_sets())
@@ -143,6 +161,7 @@ def _api_list_sets():
 
 @_flask_app.route("/api/question-sets/<name>", methods=["GET", "PUT", "DELETE", "OPTIONS"])
 def _api_question_set(name: str):
+    """Erlaubt das Lesen, Schreiben und Löschen einzelner Fragensets (.json-Dateien)."""
     if request.method == "OPTIONS":
         return "", 204
     if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
@@ -162,6 +181,7 @@ def _api_question_set(name: str):
         errs = _collect_question_errors(qs)
         if errs:
             return jsonify({"errors": errs}), 422
+        # Atomares Schreiben über temporäre Datei
         tmp = str(path) + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(qs, f, indent=2, ensure_ascii=False)
@@ -181,6 +201,7 @@ def _api_question_set(name: str):
 
 @_flask_app.route("/api/active-set", methods=["GET", "POST", "OPTIONS"])
 def _api_active_set():
+    """Gibt das aktive Fragenset zurück oder wechselt es (nur im Zustand WAITING)."""
     if request.method == "OPTIONS":
         return "", 204
     gm = current_app.config["gm"]
@@ -196,17 +217,14 @@ def _api_active_set():
     return jsonify({"ok": True, "active": gm.active_set})
 
 
-# ── Concurrency helper ──────────────────────────────────────────────────────────
+# ── Concurrency Helper ────────────────────────────────────────────────────────
 
 def _locked(method):
-    """Run a GameMaster method while holding ``self._lock``.
+    """Dekorator zur Absicherung von Methodenaufrufen mittels `self._lock`.
 
-    ``self._lock`` is a re-entrant lock (``threading.RLock``), so a ``@_locked``
-    method may freely call other ``@_locked`` methods (e.g. ``start_game`` →
-    ``_transition_to_question``) without dead-locking. This makes every state
-    transition atomic with respect to the MQTT-callback thread, the Flask admin
-    thread, and the ``threading.Timer`` callback threads — all of which touch
-    ``self.gs`` / ``self.gs.answers`` / ``self.players`` / ``self.questions``.
+    Da der Game Master auf verschiedenen Threads operiert (MQTT Callback-Thread,
+    Flask REST-Thread, threading.Timer-Threads), sorgt dieser re-entrante Lock
+    dafür, dass Zustandsänderungen atomar und frei von Race Conditions bleiben.
     """
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
@@ -217,6 +235,7 @@ def _locked(method):
 
 @dataclass
 class Player:
+    """Repräsentiert einen angemeldeten Spieler (ESP8266 Controller)."""
     device_id: str
     name: str
     score: int   = 0
@@ -226,14 +245,17 @@ class Player:
 
 @dataclass
 class GameState:
+    """Repräsentiert den aktuellen Laufzeitzustand des Spiels."""
     state: str = "WAITING"
     question_index: int = 0
     question_id: int = 0
     question_start: float = 0.0
-    answers: dict = field(default_factory=dict)  # device_id → answer payload
+    answers: dict = field(default_factory=dict)  # device_id -> {"answer": str, "elapsed_ms": int}
 
 
 class GameMaster:
+    """Zentrale Logikklasse des Spielleiters."""
+
     def __init__(
         self,
         broker: str,
@@ -254,12 +276,11 @@ class GameMaster:
         self.players: dict[str, Player] = {}
         self.gs            = GameState()
         self._timer: Optional[threading.Timer] = None
-        # Re-entrant: guards self.gs, self.gs.answers, self.players and
-        # self.questions across the MQTT, Flask and Timer threads. See @_locked.
-        self._lock         = threading.RLock()
+        self._lock         = threading.RLock()  # Schützt den gemeinsamen Spielzustand
 
         self._load_persisted_state()
 
+        # Initialisierung des MQTT Clients
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.client.reconnect_delay_set(min_delay=1, max_delay=30)
         self.client.on_connect    = self._on_connect
@@ -269,13 +290,14 @@ class GameMaster:
     # ── Question sets ─────────────────────────────────────────────────────────
 
     def _scan_question_sets(self) -> list[dict]:
+        """Scannt das Fragen-Verzeichnis nach gültigen JSON-Fragensets ab."""
         sets = []
         try:
             for path in sorted(Path(self.questions_dir).glob("*.json")):
                 try:
                     qs = json.loads(path.read_text(encoding="utf-8"))
                     if not isinstance(qs, list):
-                        continue  # skip non-array files (e.g. game_state.json)
+                        continue  # Überspringe Nicht-Array-Dateien (z.B. game_state.json)
                     sets.append({
                         "name":   path.stem,
                         "count":  len(qs),
@@ -288,6 +310,7 @@ class GameMaster:
         return sets
 
     def _publish_question_sets(self) -> None:
+        """Veröffentlicht die Liste der Fragensets auf MQTT für das Frontend."""
         self._publish("quiz/question_sets", {
             "sets":   self._scan_question_sets(),
             "active": self.active_set,
@@ -295,7 +318,10 @@ class GameMaster:
 
     @_locked
     def load_set(self, name: str) -> str | None:
-        """Switch to a different question set. Returns an error string or None on success."""
+        """Wechselt zu einem anderen Fragenset.
+
+        Gibt bei Erfolg None zurück, andernfalls eine Fehlermeldung.
+        """
         if self.gs.state != "WAITING":
             return f"cannot switch set in {self.gs.state} state"
         path = Path(self.questions_dir) / f"{name}.json"
@@ -315,6 +341,7 @@ class GameMaster:
         return None
 
     def _start_api_server(self) -> None:
+        """Startet den Flask-Server in einem Hintergrundthread."""
         _flask_app.config["gm"] = self
         t = threading.Thread(
             target=lambda: _flask_app.run(
@@ -329,6 +356,7 @@ class GameMaster:
     # ── Persistence ───────────────────────────────────────────────────────────
 
     def _load_persisted_state(self) -> None:
+        """Lädt den Spielzustand und die Spielerliste aus game_state.json (Crash-Recovery)."""
         if not os.path.exists(self.state_file):
             return
         try:
@@ -344,7 +372,7 @@ class GameMaster:
                 name=p["name"],
                 score=p.get("score", 0),
                 streak=p.get("streak", 0),
-                online=False,  # everyone is offline until they reconnect
+                online=False,  # Geräte müssen sich erneut anmelden/verbinden
             )
         self.gs.question_index = data.get("question_index", 0)
         self.gs.question_id    = data.get("question_id", 0)
@@ -354,6 +382,7 @@ class GameMaster:
         )
 
     def _save_state(self) -> None:
+        """Sichert den aktuellen Spielstand atomar in game_state.json."""
         data = {
             "saved_at":       time.strftime("%Y-%m-%dT%H:%M:%S"),
             "state":          self.gs.state,
@@ -372,30 +401,35 @@ class GameMaster:
         except OSError as e:
             print(f"[persist] failed to save state: {e}")
 
-    # ── MQTT callbacks ────────────────────────────────────────────────────────
+    # ── MQTT Callbacks ────────────────────────────────────────────────────────
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):
+        """Callback bei erfolgreicher Verbindung zum MQTT-Broker."""
         if reason_code == 0:
             print(f"[broker] connected to {self.broker}:{self.port}")
         else:
             print(f"[broker] connection failed: {reason_code}")
             return
+        # Subskriptionen einrichten
         client.subscribe(T_ANSWER)
         client.subscribe(T_CONNECT)
         client.subscribe(T_DISCONNECT)
         client.subscribe(T_CONTROL)
         client.subscribe(T_NAMELIST_SET)
+        # Aktuellen Zustand pushen
         self._publish_state()
         self._publish_players()
         self._publish_question_sets()
 
     def _on_disconnect(self, client, userdata, flags, reason_code, properties):
+        """Callback bei Verbindungsverlust zum Broker."""
         if reason_code == 0:
             print("[broker] disconnected cleanly")
         else:
             print(f"[broker] lost connection (rc={reason_code}), reconnecting with backoff …")
 
     def _on_message(self, client, userdata, msg: mqtt.MQTTMessage):
+        """Zentraler MQTT Message Handler. Routet Nachrichten basierend auf Topics."""
         topic   = msg.topic
         payload = msg.payload.decode("utf-8", errors="replace")
 
@@ -415,10 +449,11 @@ class GameMaster:
         elif topic == T_NAMELIST_SET:
             self._handle_namelist(data)
 
-    # ── Device lifecycle ──────────────────────────────────────────────────────
+    # ── Device Lifecycle ──────────────────────────────────────────────────────
 
     @_locked
     def _handle_connect(self, topic: str, data: dict):
+        """Registriert neue Controller oder verarbeitet Reconnects."""
         device_id = topic.split("/")[-1]
         name      = data.get("name", device_id)
         if device_id in self.players:
@@ -435,6 +470,7 @@ class GameMaster:
 
     @_locked
     def _handle_disconnect(self, topic: str):
+        """Setzt den Status eines Spielers auf offline (empfangen per Last-Will)."""
         device_id = topic.split("/")[-1]
         if device_id in self.players:
             self.players[device_id].online = False
@@ -442,12 +478,16 @@ class GameMaster:
         self._publish_players()
 
     def _online_count(self) -> int:
-        """Must be called with self._lock held."""
+        """Gibt die Anzahl der aktuell verbundenen Spieler zurück.
+
+        Muss mit gesetztem Lock aufgerufen werden.
+        """
         return sum(1 for p in self.players.values() if p.online)
 
-    # ── Control (frontend start button) ──────────────────────────────────────
+    # ── Control (Frontend-Befehle) ───────────────────────────────────────────
 
     def _handle_control(self, data: dict):
+        """Verarbeitet Administrationskommandos."""
         action = data.get("action")
         if action == "start":
             print("[control] start requested via MQTT")
@@ -465,20 +505,20 @@ class GameMaster:
                 print(f"[control] load_set failed: {err}")
 
     def _handle_namelist(self, data: dict):
-        """Relay the name list from the frontend to all devices (retained)."""
+        """Verteilt die konfigurierte Namensliste an alle late-joining ESP-Controller."""
         names = data.get("names", [])
         if not isinstance(names, list) or len(names) == 0:
             print("[namelist] empty or invalid — ignored")
             return
         names = [str(n)[:15] for n in names[:20]]
         print(f"[namelist] relaying {len(names)} names to devices: {names}")
-        # Publish on the device topic and retain it so late-joining firmware receives it once.
         self.client.publish(T_NAMELIST, json.dumps({"names": names}), retain=True)
 
-    # ── Answer handling ───────────────────────────────────────────────────────
+    # ── Answer Handling ───────────────────────────────────────────────────────
 
     @_locked
     def _handle_answer(self, topic: str, data: dict):
+        """Verarbeitet eintreffende Antworten während der Abstimmungsphase."""
         if self.gs.state != "VOTING":
             return
         device_id   = topic.split("/")[-1]
@@ -487,9 +527,9 @@ class GameMaster:
         elapsed_ms  = data.get("elapsed_ms", 0)
 
         if question_id != self.gs.question_id:
-            return  # stale answer
+            return  # Veraltete Antwort
         if device_id in self.gs.answers:
-            return  # already answered
+            return  # Doppelt abgegebene Antwort ignorieren
 
         self.gs.answers[device_id] = {"answer": answer, "elapsed_ms": elapsed_ms}
         print(f"[answer] {device_id}: {answer}  ({elapsed_ms} ms)")
@@ -500,14 +540,15 @@ class GameMaster:
             "total":       total,
         })
 
-        # Wenn alle aktuell online Spieler geantwortet haben, Reveal sofort zeigen.
+        # Wenn alle aktuell aktiven Online-Spieler geantwortet haben, Abstimmung sofort beenden.
         if total > 0 and len(self.gs.answers) >= total:
             print("[voting] all online players answered -> reveal now")
             self._finish_voting_early()
 
-    # ── State machine ─────────────────────────────────────────────────────────
+    # ── State Machine Transitions ─────────────────────────────────────────────
 
     def _publish_state(self, remaining_s: int = 0):
+        """Veröffentlicht den Status der State-Machine per Retained-Message."""
         self._publish(T_STATE, {
             "state":       self.gs.state,
             "question_id": self.gs.question_id,
@@ -515,6 +556,7 @@ class GameMaster:
         }, retain=True)
 
     def _publish_players(self):
+        """Veröffentlicht die aktuelle Spielerliste."""
         with self._lock:
             players = [
                 {"device_id": p.device_id, "name": p.name, "online": p.online}
@@ -523,11 +565,12 @@ class GameMaster:
         self._publish(T_PLAYERS, {"players": players, "min_players": MIN_PLAYERS}, retain=True)
 
     def _publish(self, topic: str, payload: dict, retain: bool = False):
+        """MQTT Helper zum Senden von JSON-Payloads."""
         self.client.publish(topic, json.dumps(payload), retain=retain)
 
     @_locked
     def start_game(self):
-        """Advance from WAITING → first QUESTION."""
+        """Startet das Quiz (Übergang WAITING -> erste QUESTION)."""
         if self.gs.state != "WAITING":
             print("[game] already running")
             return
@@ -541,6 +584,7 @@ class GameMaster:
 
     @_locked
     def _transition_to_question(self):
+        """Wechselt in die Fragen-Ankündigung (QUESTION)."""
         if self.gs.question_index >= len(self.questions):
             self._transition_to_ended()
             return
@@ -559,6 +603,7 @@ class GameMaster:
             "text":         q["text"],
             "time_limit_s": q["time_limit_s"],
         }
+        # Typspezifische Zusatzfelder für die Controller-Laufzeit
         if q_type == "estimate":
             payload["min"]  = q["min"]
             payload["max"]  = q["max"]
@@ -574,23 +619,28 @@ class GameMaster:
             payload["tolerance"] = q.get("tolerance", 1.5)
         else:
             payload["options"] = q["options"]
+
         self._publish(T_QUESTION, payload)
         self._publish_state(remaining_s=q["time_limit_s"])
         print(f"[question {self.gs.question_id}] {q['text']}")
 
+        # 3 Sekunden Countdown zur Vorbereitung, danach Abstimmung freigeben
         self._set_timer(3, self._transition_to_voting)
 
     @_locked
     def _transition_to_voting(self):
+        """Öffnet die Abstimmungsphase (VOTING). Controller dürfen nun Antworten senden."""
         q = self.questions[self.gs.question_index]
         self.gs.state          = "VOTING"
         self.gs.question_start = time.monotonic()
         self._publish_state(remaining_s=q["time_limit_s"])
         print(f"[voting] open for {q['time_limit_s']}s")
+        # Automatische Beendigung nach Ablauf der Zeitgrenze
         self._set_timer(q["time_limit_s"], self._transition_to_reveal)
 
     @_locked
     def _finish_voting_early(self):
+        """Bricht den Voting-Timer vorzeitig ab (wenn alle geantwortet haben)."""
         if self.gs.state != "VOTING":
             return
         if self._timer:
@@ -600,6 +650,7 @@ class GameMaster:
 
     @_locked
     def _transition_to_reveal(self):
+        """Zeigt die richtige Antwort auf dem Beamer (REVEAL) und berechnet Punkte."""
         if self.gs.state != "VOTING":
             return
         q            = self.questions[self.gs.question_index]
@@ -607,13 +658,14 @@ class GameMaster:
         time_limit_ms = q["time_limit_s"] * 1000
         players_snapshot = dict(self.players)
 
-        # ── mark no-answer players streak=0 ──────────────────────────────────
+        # Streak zurücksetzen für Spieler, die gar nicht geantwortet haben
         for device_id, player in players_snapshot.items():
             if device_id not in self.gs.answers:
                 player.streak = 0
 
         self.gs.state = "REVEAL"
 
+        # Routing basierend auf Fragestellungs-Typ
         if q_type == "estimate":
             self._reveal_estimate(q, time_limit_ms, players_snapshot)
         elif q_type == "higher_lower":
@@ -628,8 +680,10 @@ class GameMaster:
         self._publish_state()
         self._set_timer(5, self._transition_to_scores)
 
-    # ── MCQ reveal ────────────────────────────────────────────────────────────
+    # ── MCQ Reveal ────────────────────────────────────────────────────────────
+
     def _reveal_mcq(self, q: dict, time_limit_ms: int, players: dict):
+        """Berechnet Punkte für Multiple Choice Fragen."""
         correct = q["correct"].upper()
         counts: dict[str, int] = {k: 0 for k in q["options"]}
         for ans in self.gs.answers.values():
@@ -643,6 +697,7 @@ class GameMaster:
             if ans["answer"] == correct:
                 player.streak += 1
                 elapsed      = min(ans["elapsed_ms"], time_limit_ms)
+                # Formel für abklingenden Zeitbonus
                 time_bonus   = round(TIME_BONUS * (1 - elapsed / time_limit_ms))
                 streak_level = min(player.streak - 1, MAX_STREAK_LEVELS)
                 streak_bonus = streak_level * STREAK_BONUS_PER_LVL
@@ -659,8 +714,10 @@ class GameMaster:
         })
         print(f"[reveal/mcq] correct={correct}  counts={counts}")
 
-    # ── Estimate reveal ───────────────────────────────────────────────────────
+    # ── Estimate Reveal ───────────────────────────────────────────────────────
+
     def _reveal_estimate(self, q: dict, time_limit_ms: int, players: dict):
+        """Berechnet gestaffelte Punkte für Schätzfragen."""
         correct  = int(q["correct"])
         rng      = max(q["max"] - q["min"], 1)
         answers_out = []
@@ -678,6 +735,7 @@ class GameMaster:
             delta        = abs(guess - correct)
             rel_err      = delta / rng
             base         = 0
+            # Durchsuche Schwellenwerte für gestaffelte Punktevergabe
             for threshold, pts in ESTIMATE_TIERS:
                 if rel_err <= threshold:
                     base = pts
@@ -708,9 +766,11 @@ class GameMaster:
         })
         print(f"[reveal/estimate] correct={correct}")
 
-    # ── Higher / Lower reveal ─────────────────────────────────────────────────
+    # ── Higher / Lower Reveal ─────────────────────────────────────────────────
+
     def _reveal_higher_lower(self, q: dict, time_limit_ms: int, players: dict):
-        correct = q["correct"].upper()   # "HIGHER" or "LOWER"
+        """Berechnet Punkte für Höher/Niedriger Fragen."""
+        correct = q["correct"].upper()   # "HIGHER" oder "LOWER"
         counts  = {"HIGHER": 0, "LOWER": 0}
 
         for ans in self.gs.answers.values():
@@ -742,8 +802,10 @@ class GameMaster:
         })
         print(f"[reveal/higher_lower] correct={correct}  actual={q['actual']}  counts={counts}")
 
-    # ── Poti Target reveal ────────────────────────────────────────────────────
+    # ── Poti Target Reveal ────────────────────────────────────────────────────
+
     def _reveal_poti_target(self, q: dict, players: dict):
+        """Berechnet linear abfallende Punkte für Poti-Target Challenges."""
         correct   = int(q["target"])
         tolerance = int(q.get("tolerance", 5))
         answers_out = []
@@ -760,7 +822,7 @@ class GameMaster:
             delta  = abs(guess - correct)
             earned = 0
             if delta <= tolerance:
-                # Score: full points at exact, linear decay to 0 at tolerance boundary
+                # Volle Punkte bei 0 Abweichung, lineare Abschwächung bis zur Toleranzgrenze
                 earned = round(BASE_SCORE * (1 - delta / max(tolerance, 1)))
                 player.streak += 1
             else:
@@ -783,8 +845,10 @@ class GameMaster:
         })
         print(f"[reveal/poti_target] correct={correct}%  tolerance=±{tolerance}%")
 
-    # ── Temp Target reveal ────────────────────────────────────────────────────
+    # ── Temp Target Reveal ────────────────────────────────────────────────────
+
     def _reveal_temp_target(self, q: dict, players: dict):
+        """Berechnet linear abfallende Punkte für Temperatursensor-Challenges."""
         correct   = float(q["target"])
         tolerance = float(q.get("tolerance", 1.5))
         answers_out = []
@@ -801,6 +865,7 @@ class GameMaster:
             delta  = abs(guess - correct)
             earned = 0
             if delta <= tolerance:
+                # Volle Punkte bei exaktem Treffer, linearer Abfall bis Toleranzgrenze
                 earned = round(BASE_SCORE * (1 - delta / max(tolerance, 1)))
                 player.streak += 1
             else:
@@ -823,8 +888,11 @@ class GameMaster:
         })
         print(f"[reveal/temp_target] correct={correct}°C  tolerance=±{tolerance}°C")
 
+    # ── Scores and Game End ───────────────────────────────────────────────────
+
     @_locked
     def _transition_to_scores(self):
+        """Wechselt in die Leaderboard-Ansicht (SCORES)."""
         self.gs.state = "SCORES"
         scoreboard = sorted(
             [{"device_id": p.device_id, "name": p.name, "score": p.score, "streak": p.streak}
@@ -838,6 +906,8 @@ class GameMaster:
 
         self.gs.question_index += 1
         self._save_state()
+
+        # Nach 5 Sekunden entweder zur nächsten Frage springen oder das Spiel beenden
         if self.gs.question_index < len(self.questions):
             self._set_timer(5, self._transition_to_question)
         else:
@@ -845,6 +915,7 @@ class GameMaster:
 
     @_locked
     def _transition_to_ended(self):
+        """Beendet das Quiz vollständig (ENDED)."""
         self.gs.state = "ENDED"
         self._publish_state()
         self._save_state()
@@ -852,7 +923,7 @@ class GameMaster:
 
     @_locked
     def restart_game(self):
-        """Reset scores and state back to WAITING so a new game can start."""
+        """Setzt die Punkte der Spieler zurück und versetzt das Spiel in die Lobby (WAITING)."""
         if self.gs.state not in ("ENDED", "WAITING"):
             print(f"[game] restart ignored — state is {self.gs.state}")
             return
@@ -862,24 +933,26 @@ class GameMaster:
         for p in self.players.values():
             p.score  = 0
             p.streak = 0
-        self.gs = GameState()  # fresh state, question_index=0, question_id=0
+        self.gs = GameState()  # Frischer Spielzustand
         print("[game] restarted — back to WAITING")
         self._publish_state()
         self._publish_players()
         self._save_state()
 
-    # ── Timer helpers ─────────────────────────────────────────────────────────
+    # ── Timer Helpers ─────────────────────────────────────────────────────────
 
     def _set_timer(self, seconds: float, callback):
+        """Hilfsfunktion zum Setzen eines asynchronen Dämonen-Timers."""
         if self._timer:
             self._timer.cancel()
         self._timer = threading.Timer(seconds, callback)
         self._timer.daemon = True
         self._timer.start()
 
-    # ── Run ───────────────────────────────────────────────────────────────────
+    # ── Main Run Loop ─────────────────────────────────────────────────────────
 
     def run(self):
+        """Hauptfunktion des Game Masters. Startet API & MQTT Loop."""
         self._start_api_server()
         print("AALeC Quiz — Game Master")
         print(f"  Broker   : {self.broker}:{self.port}")
@@ -894,8 +967,7 @@ class GameMaster:
             print(f"[broker] initial connection failed ({e}) — will retry automatically …")
 
         try:
-            # loop_forever blocks and handles reconnection on unexpected disconnects.
-            # retry_first_connection=True also covers a failed initial connect().
+            # loop_forever blockiert den Hauptthread und steuert die automatische Reconnection
             self.client.loop_forever(retry_first_connection=True)
         except KeyboardInterrupt:
             pass
@@ -906,9 +978,10 @@ class GameMaster:
         print("Bye.")
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ── Entry Point ───────────────────────────────────────────────────────────────
 
 def main():
+    """Liest Kommandozeilenargumente ein und startet die Anwendung."""
     parser = argparse.ArgumentParser(description="AALeC Quiz Game Master")
     parser.add_argument("--broker",        default="localhost",       help="MQTT broker host")
     parser.add_argument("--port",          default=1883,  type=int,   help="MQTT broker port")

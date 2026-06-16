@@ -3,13 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./admin.module.css";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Typdefinitionen ───────────────────────────────────────────────────────────
 
 type QType = "mcq" | "estimate" | "higher_lower" | "poti_target" | "temp_target";
 type AnyQ  = Record<string, unknown>;
 
-interface SetSummary { name: string; count: number; active: boolean; }
+interface SetSummary {
+  name: string;
+  count: number;
+  active: boolean;
+}
 
+// Benutzerfreundliche Beschriftungen der Fragentypen im Dropdown
 const TYPE_LABELS: Record<QType, string> = {
   mcq:          "Multiple Choice",
   estimate:     "Schätzfrage",
@@ -18,6 +23,7 @@ const TYPE_LABELS: Record<QType, string> = {
   temp_target:  "Temperatur-Challenge",
 };
 
+// Standard-Datenstrukturen beim Neuanlegen einer Frage
 const DEFAULTS: Record<QType, AnyQ> = {
   mcq:          { type: "mcq",          text: "", options: { A: "", B: "", C: "", D: "" }, correct: "A", time_limit_s: 20 },
   estimate:     { type: "estimate",     text: "", min: 0, max: 100, unit: "", correct: 50, time_limit_s: 30 },
@@ -26,9 +32,10 @@ const DEFAULTS: Record<QType, AnyQ> = {
   temp_target:  { type: "temp_target",  text: "", target: 25.0, tolerance: 2.0, time_limit_s: 20 },
 };
 
+// URL der Admin-REST-API des Game Masters
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-// ── Question form fields ───────────────────────────────────────────────────────
+// ── Eingabefeld-Wrapper-Komponente ───────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -39,12 +46,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+// ── Dynamische Formular-Komponente für Fragen-Eigenschaften ──────────────────
+
 function QuestionForm({ q, onChange }: { q: AnyQ; onChange: (q: AnyQ) => void }) {
   const type = (q.type ?? "mcq") as QType;
   const set  = (key: string, val: unknown) => onChange({ ...q, [key]: val });
 
   return (
     <div className={styles.qForm}>
+      {/* Allgemeines Feld: Fragentext */}
       <Field label="Fragentext">
         <textarea
           className={styles.textarea}
@@ -54,12 +64,14 @@ function QuestionForm({ q, onChange }: { q: AnyQ; onChange: (q: AnyQ) => void })
         />
       </Field>
 
+      {/* Allgemeines Feld: Zeitlimit */}
       <Field label="Zeitlimit (s)">
         <input type="number" className={styles.input} min={5} max={300}
           value={Number(q.time_limit_s ?? 20)}
           onChange={e => set("time_limit_s", Number(e.target.value))} />
       </Field>
 
+      {/* Typspezifische Felder: Multiple Choice (MCQ) */}
       {type === "mcq" && (
         <>
           {(["A", "B", "C", "D"] as const).map(k => (
@@ -78,6 +90,7 @@ function QuestionForm({ q, onChange }: { q: AnyQ; onChange: (q: AnyQ) => void })
         </>
       )}
 
+      {/* Typspezifische Felder: Schätzfrage (Estimate) */}
       {type === "estimate" && (
         <>
           <Field label="Min"><input type="number" className={styles.input} value={Number(q.min ?? 0)} onChange={e => set("min", Number(e.target.value))} /></Field>
@@ -87,6 +100,7 @@ function QuestionForm({ q, onChange }: { q: AnyQ; onChange: (q: AnyQ) => void })
         </>
       )}
 
+      {/* Typspezifische Felder: Höher / Niedriger (Higher / Lower) */}
       {type === "higher_lower" && (
         <>
           <Field label="Referenzwert"><input type="number" className={styles.input} value={Number(q.reference ?? 0)} onChange={e => set("reference", Number(e.target.value))} /></Field>
@@ -101,6 +115,7 @@ function QuestionForm({ q, onChange }: { q: AnyQ; onChange: (q: AnyQ) => void })
         </>
       )}
 
+      {/* Typspezifische Felder: Poti- & Temperatur-Challenges */}
       {(type === "poti_target" || type === "temp_target") && (
         <>
           <Field label={type === "temp_target" ? "Zieltemperatur (°C)" : "Zielwert (%)"}>
@@ -115,7 +130,7 @@ function QuestionForm({ q, onChange }: { q: AnyQ; onChange: (q: AnyQ) => void })
   );
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────────
+// ── Haupt-Admin-Komponente ───────────────────────────────────────────────────
 
 export default function AdminPage() {
   const [sets,        setSets]        = useState<SetSummary[]>([]);
@@ -130,13 +145,16 @@ export default function AdminPage() {
   const [status,      setStatus]      = useState<{ msg: string; ok: boolean } | null>(null);
   const dragFrom = useRef<number | null>(null);
 
+  // Sets beim ersten Rendern laden
   useEffect(() => { loadSets(); }, []);
 
+  /** Shows status message in UI for 3s */
   function flash(msg: string, ok = true) {
     setStatus({ msg, ok });
     setTimeout(() => setStatus(null), 3000);
   }
 
+  /** Lade alle Fragensets von der REST-API */
   async function loadSets() {
     try {
       const res = await fetch(`${API}/api/question-sets`);
@@ -144,6 +162,7 @@ export default function AdminPage() {
     } catch { flash("API nicht erreichbar", false); }
   }
 
+  /** Öffnet und lädt ein bestimmtes Fragenset in den Editor */
   async function openSet(name: string) {
     try {
       const res = await fetch(`${API}/api/question-sets/${name}`);
@@ -156,6 +175,7 @@ export default function AdminPage() {
     } catch { flash("Ladefehler", false); }
   }
 
+  /** Speichert das aktuell bearbeitete Set zurück zum Server */
   async function saveSet() {
     if (!currentSet) return;
     try {
@@ -172,6 +192,7 @@ export default function AdminPage() {
     } catch { flash("Speicherfehler", false); }
   }
 
+  /** Löscht ein komplettes Fragenset nach Rückfrage */
   async function deleteSet(name: string) {
     if (!confirm(`Set '${name}' löschen?`)) return;
     try {
@@ -184,6 +205,7 @@ export default function AdminPage() {
     } catch { flash("Fehler", false); }
   }
 
+  /** Erstellt ein leeres neues Fragenset */
   async function createSet() {
     const name = newSetName.trim();
     if (!name || !/^[A-Za-z0-9_-]+$/.test(name)) {
@@ -203,6 +225,7 @@ export default function AdminPage() {
     } catch { flash("Fehler", false); }
   }
 
+  /** Markiert ein Fragenset als aktiv beim Game Master */
   async function setActive(name: string) {
     try {
       const res = await fetch(`${API}/api/active-set`, {
@@ -217,7 +240,7 @@ export default function AdminPage() {
     } catch { flash("Fehler", false); }
   }
 
-  // ── Question operations ──────────────────────────────────────────────────────
+  // ── Fragen-Operationen im Editor ─────────────────────────────────────────────
 
   function updateQ(idx: number, q: AnyQ) {
     setQuestions(prev => prev.map((old, i) => i === idx ? q : old));
@@ -232,7 +255,7 @@ export default function AdminPage() {
 
   function addQuestion() {
     setQuestions(prev => [...prev, { ...newQ }]);
-    setExpandedIdx(questions.length); // expand the new one
+    setExpandedIdx(questions.length); // Klappt die neu erstellte Frage direkt auf
     setShowAddForm(false);
     setNewQ(DEFAULTS[addType]);
     setDirty(true);
@@ -243,7 +266,7 @@ export default function AdminPage() {
     setNewQ(DEFAULTS[t]);
   }
 
-  // ── Drag & drop reorder ──────────────────────────────────────────────────────
+  // ── Drag & Drop Steuerung zum Sortieren der Fragen ───────────────────────────
 
   function onDragStart(idx: number) { dragFrom.current = idx; }
 
@@ -266,7 +289,7 @@ export default function AdminPage() {
     setDirty(true);
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Render-Methode des Admin Panels ──────────────────────────────────────────
 
   return (
     <div className={styles.page}>
@@ -281,7 +304,7 @@ export default function AdminPage() {
       </header>
 
       <div className={styles.layout}>
-        {/* ── Sidebar: set list ── */}
+        {/* ── Linke Spalte: Set-Liste ── */}
         <aside className={styles.sidebar}>
           <h2 className={styles.sidebarTitle}>Fragen-Sets</h2>
           <ul className={styles.setList}>
@@ -320,7 +343,7 @@ export default function AdminPage() {
           </div>
         </aside>
 
-        {/* ── Editor ── */}
+        {/* ── Rechte Spalte: Editor-Bereich ── */}
         <main className={styles.editor}>
           {!currentSet ? (
             <p className={styles.placeholder}>← Set auswählen oder neu erstellen</p>
@@ -340,7 +363,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Question list */}
+              {/* Fragenelemente mit Drag & Drop Support */}
               <ol className={styles.qList}>
                 {questions.map((q, idx) => (
                   <li
@@ -363,6 +386,7 @@ export default function AdminPage() {
                     </button>
                     <button className={styles.btnDeleteQ} onClick={() => deleteQ(idx)}>✕</button>
 
+                    {/* Ausgeklapptes Bearbeitungsformular */}
                     {expandedIdx === idx && (
                       <div className={styles.qFormWrapper}>
                         <QuestionForm q={q} onChange={updated => updateQ(idx, updated)} />
@@ -372,7 +396,7 @@ export default function AdminPage() {
                 ))}
               </ol>
 
-              {/* Add question */}
+              {/* Formular zum Hinzufügen einer neuen Frage */}
               {showAddForm ? (
                 <div className={styles.addPanel}>
                   <div className={styles.addPanelHeader}>

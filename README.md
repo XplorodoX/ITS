@@ -8,7 +8,7 @@ Dieses Repository enthält das **AALeC Quiz**, ein lokales Echtzeit-Multiplayer-
 
 Das System teilt sich in drei Hauptkomponenten auf:
 
-1. **Hardware & Firmware (`src/firmware/Joahatunrecht`)**:
+1. **Hardware & Firmware (`src/firmware/Controller`)**:
    * ESP8266-basierte AALeC-V3 Controller, die sich mit dem WLAN-Hotspot verbinden und Eingaben (Drehgeber, Potentiometer, Temperatursensor) erfassen.
    * Kommunikation erfolgt in Echtzeit über **MQTT**.
 2. **Backend / Game Master (`src/backend`)**:
@@ -23,31 +23,60 @@ Das System teilt sich in drei Hauptkomponenten auf:
 
 * [src/backend](file:///Users/merluee/ITS/src/backend) — Python Game Master, REST-API und Fragensets.
 * [src/frontend](file:///Users/merluee/ITS/src/frontend) — Next.js Beamer-Projektor-Anwendung.
-* [src/firmware/Joahatunrecht](file:///Users/merluee/ITS/src/firmware/Joahatunrecht) — PlatformIO C++ Firmware für die AALeC-Clients.
-* [src/firmware/Hotspot](file:///Users/merluee/ITS/src/firmware/Hotspot) — Firmware für den Arduino Uno R4, der den WLAN-Hotspot aufspannt.
+* [src/firmware/Controller](file:///Users/merluee/ITS/src/firmware/Controller) — PlatformIO C++ Firmware für die AALeC-Clients.
 * [.github/workflows](file:///Users/merluee/ITS/.github/workflows) — CI/CD Workflows für automatisierte Builds und Releases.
 * [docs](file:///Users/merluee/ITS/docs) — Weiterführende Dokumentationen und Anleitungen.
 
 ---
 
+## 📦 Schnellstart mit Pre-built Releases (Ohne Kompilieren)
+
+Du musst die Anwendung und die Firmware nicht selbst kompilieren. Du kannst direkt die vorgefertigten Container-Images und die kompilierte Firmware aus den GitHub Releases nutzen:
+
+### 1. Pre-compiled Controller-Firmware flashen
+1. Lade die fertig kompilierte `firmware.bin` aus dem neuesten **GitHub Release** dieses Repositories herunter.
+2. Lege die Datei einfach direkt in den Ordner `src/firmware/Controller/` ab.
+3. Verbinde den AALeC-Controller per USB mit deinem Mac.
+4. Führe das Upload-Skript aus:
+   ```bash
+   ./src/firmware/Controller/upload.sh
+   ```
+
+### 2. Pre-built Docker/Podman Container starten
+Die `docker-compose.yml` im Hauptverzeichnis ist standardmäßig so konfiguriert, dass sie die fertigen Images direkt aus der GitHub Container Registry (GHCR) herunterlädt. Starte alle Services einfach mit:
+```bash
+podman-compose up -d  # oder docker-compose up -d
+```
+
+### 🛠️ Lokale Entwicklung (Kompilieren aus dem Source-Code)
+Falls du Änderungen am Code vornimmst und diese lokal bauen und ausführen möchtest:
+1. **Container lokal bauen & starten**:
+   ```bash
+   podman-compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+   # bzw. docker-compose
+   ```
+2. **Firmware lokal kompilieren**: Folge den regulären Schritten unter [Setup & Ausführung](#🚀-setup--ausführung).
+
+---
+
 ## 🚀 Setup & Ausführung
 
-Folge diesen Schritten, um das Quiz-System lokal aufzusetzen und zu starten:
+Folge diesen Schritten, um das Quiz-System von Grund auf lokal aufzusetzen und zu starten:
 
 ### Schritt 1: Netzwerk & mDNS konfigurieren (Wichtig!)
 Damit du den Code auf den AALeC-Geräten nicht bei jedem Wechsel der IP-Adresse neu flashen musst, wird **mDNS** zur Broker-Suche genutzt.
 1. Ermittle den lokalen Hostnamen deines Macs im Terminal:
    ```bash
    scutil --get LocalHostName
-   # Beispielausgabe: MacBook-Pro-von-Florian
+   # Beispielausgabe: dein-pc-name.local
    ```
 2. Kopiere die Konfigurationsdatei im Firmware-Ordner:
    ```bash
-   cp src/firmware/Joahatunrecht/src/config.h.example src/firmware/Joahatunrecht/src/config.h
+   cp src/firmware/Controller/src/config.h.example src/firmware/Controller/src/config.h
    ```
 3. Passe in der neuen `config.h` den Hostnamen an (füge `.local` an deinen Mac-Namen an):
    ```cpp
-   #define MQTT_BROKER   "MacBook-Pro-von-Florian.local"
+   #define MQTT_BROKER   "dein-pc-name.local"
    ```
 
 ### Schritt 2: Docker-Container (Backend, Frontend & Broker) starten
@@ -63,7 +92,7 @@ Dies startet:
 ### Schritt 3: Firmware flashen
 1. Verbinde das AALeC-Gerät per USB mit deinem Mac.
 2. Verbinde deinen Mac mit dem WLAN-Hotspot **`AALeC-Quiz`** (Passwort: `12345678`).
-3. Öffne PlatformIO und führe den **Upload** für das Projekt `Joahatunrecht` aus.
+3. Öffne PlatformIO und führe den **Upload** für das Projekt `Controller` aus.
 
 ---
 

@@ -16,12 +16,17 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 PORT="${1:-/dev/cu.usbserial-110}"
-BIN=.pio/build/esp12e/firmware.bin
 ESPTOOL=~/.platformio/packages/tool-esptoolpy/esptool.py
 PYTHON=~/.platformio/penv/bin/python
 
+if [ -f "firmware.bin" ]; then
+  BIN=firmware.bin
+else
+  BIN=.pio/build/esp12e/firmware.bin
+fi
+
 if [ ! -f "$BIN" ]; then
-  echo "error: $BIN not found — run ./build.sh first" >&2
+  echo "error: $BIN not found — run ./build.sh or place a pre-built firmware.bin here first" >&2
   exit 1
 fi
 

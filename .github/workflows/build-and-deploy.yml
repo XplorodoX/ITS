@@ -40,8 +40,8 @@ jobs:
         with:
           path: |
             ~/.platformio
-            src/firmware/Joahatunrecht/.pio
-          key: ${{ runner.os }}-platformio-${{ hashFiles('src/firmware/Joahatunrecht/platformio.ini') }}
+            src/firmware/Controller/.pio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('src/firmware/Controller/platformio.ini') }}
           restore-keys: |
             ${{ runner.os }}-platformio-
 
@@ -50,18 +50,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio
 
-      - name: Build Firmware (Joahatunrecht ESP8266)
+      - name: Build Firmware (Controller ESP8266)
         run: |
-          cd src/firmware/Joahatunrecht
+          cd src/firmware/Controller
           # Copy config.h.example to config.h if config.h is missing (needed for CI compilation)
           cp -n src/config.h.example src/config.h || true
           pio run
 
-      - name: Upload Joahatunrecht Binary
+      - name: Upload Controller Binary
         uses: actions/upload-artifact@v4
         with:
-          name: Joahatunrecht-ESP8266-firmware
-          path: src/firmware/Joahatunrecht/.pio/build/esp12e/firmware.bin
+          name: Controller-ESP8266-firmware
+          path: src/firmware/Controller/.pio/build/esp12e/firmware.bin
           if-no-files-found: error
 
   build-containers:
@@ -144,7 +144,7 @@ jobs:
       - name: Download Firmware Binary
         uses: actions/download-artifact@v4
         with:
-          name: Joahatunrecht-ESP8266-firmware
+          name: Controller-ESP8266-firmware
           path: ./artifacts
 
       - name: Create GitHub Release

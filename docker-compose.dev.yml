@@ -1,0 +1,10 @@
+services:
+  game-master:
+    build:
+      context: ./src/backend
+
+  frontend:
+    build:
+      context: ./src/frontend
+      args:
+        NEXT_PUBLIC_MQTT_URL: ${NEXT_PUBLIC_MQTT_URL:-ws://localhost:9001}

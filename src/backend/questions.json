@@ -1,25 +1,25 @@
 [
   {
     "text": "In welchem WLAN-Hotspot-Netzwerk müssen sich die AALeC-Clients und der Mac anmelden?",
-    "options": { "A": "AALeC-Home", "B": "AALeC-Quiz", "C": "ITS-Aalen", "D": "WLAN-Foyer" },
-    "correct": "B",
+    "options": { "A": "AALeC-Quiz", "B": "AALeC-Home", "C": "ITS-Aalen", "D": "WLAN-Foyer" },
+    "correct": "A",
     "time_limit_s": 20
   },
   {
     "text": "Welcher Programmbereich in einem Arduino-Sketch wird genau einmal beim Starten des Controllers ausgeführt?",
-    "options": { "A": "loop()", "B": "setup()", "C": "init()", "D": "main()" },
-    "correct": "B",
+    "options": { "A": "loop()", "B": "init()", "C": "setup()", "D": "main()" },
+    "correct": "C",
     "time_limit_s": 20
   },
   {
     "text": "Was ist das Hauptmerkmal des 'Superloop'-Modells (Arduino standard loop)?",
     "options": {
       "A": "Es teilt Aufgaben automatisch auf mehrere CPU-Kerne auf",
-      "B": "Es führt Aufgaben sequenziell in einer Endlosschleife aus",
-      "C": "Es wird durch ein integriertes Echtzeit-Betriebssystem (RTOS) verwaltet",
-      "D": "Es reagiert ausschließlich auf hardwarebasierte Interrupts"
+      "B": "Es wird durch ein integriertes Echtzeit-Betriebssystem (RTOS) verwaltet",
+      "C": "Es reagiert ausschließlich auf hardwarebasierte Interrupts",
+      "D": "Es führt Aufgaben sequenziell in einer Endlosschleife aus"
     },
-    "correct": "B",
+    "correct": "D",
     "time_limit_s": 20
   },
   {
@@ -48,22 +48,22 @@
     "text": "Was passiert beim ESP8266, wenn eine blockierende Funktion (z.B. delay()) länger als ein paar Sekunden läuft, ohne dass yield() oder delay() aufgerufen wird?",
     "options": {
       "A": "Das WLAN-Teilsystem sendet Daten mit reduzierter Rate",
-      "B": "Der Hardware-Watchdog-Timer (WDT) löst einen Reset aus",
-      "C": "Der Speicher läuft voll (Out of Memory)",
+      "B": "Der Speicher läuft voll (Out of Memory)",
+      "C": "Der Hardware-Watchdog-Timer (WDT) löst einen Reset aus",
       "D": "Nichts, der ESP8266 läuft normal weiter"
     },
-    "correct": "B",
+    "correct": "C",
     "time_limit_s": 20
   },
   {
     "text": "Was unterscheidet ein Thermoelement (Thermocouple) von einem NTC-Widerstand?",
     "options": {
       "A": "Ein Thermoelement benötigt eine externe Versorgungsspannung",
-      "B": "Ein Thermoelement erzeugt eine temperaturabhängige elektrische Spannung (Seebeck-Effekt)",
-      "C": "Ein Thermoelement arbeitet nur im Temperaturbereich unter 0°C",
-      "D": "Es gibt keinen Unterschied, beide messen den Widerstand"
+      "B": "Ein Thermoelement arbeitet nur im Temperaturbereich unter 0°C",
+      "C": "Es gibt keinen Unterschied, beide messen den Widerstand",
+      "D": "Ein Thermoelement erzeugt eine temperaturabhängige elektrische Spannung (Seebeck-Effekt)"
     },
-    "correct": "B",
+    "correct": "D",
     "time_limit_s": 20
   },
   {

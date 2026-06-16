@@ -5,7 +5,6 @@
 
 void displayShow();
 void drawSpinner(int cx, int cy, int r, int frame);
-void drawProgressBar(int x, int y, int w, int h, int percent);
 void pulseLEDs(unsigned long t, RgbColor base);
 void showConnectingFrame();
 void showConnected();

@@ -139,14 +139,3 @@ export interface Players {
   players: LobbyPlayer[];
   min_players: number;
 }
-
-export interface QuestionSetSummary {
-  name: string;
-  count: number;
-  active: boolean;
-}
-
-export interface QuestionSets {
-  sets: QuestionSetSummary[];
-  active: string;
-}

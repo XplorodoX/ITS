@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import mqtt, { MqttClient } from "mqtt";
-import type { GameState, Question, Reveal, Scores, AnswerCount, Players, QuestionSets } from "@/types/quiz";
+import type { GameState, Question, Reveal, Scores, AnswerCount, Players } from "@/types/quiz";
 
 /**
  * Schnittstelle für das vom useMqtt-Hook bereitgestellte Spielzustands-Objekt.
@@ -20,8 +20,6 @@ export interface QuizData {
   answerCount: AnswerCount | null;
   /** Die Liste der aktuell registrierten/online Spieler in der Lobby */
   players: Players | null;
-  /** Die Liste aller verfügbaren Fragensets sowie die aktive Auswahl */
-  questionSets: QuestionSets | null;
   /** Gibt an, ob der Web-Client mit dem MQTT-Broker verbunden ist */
   connected: boolean;
   /** Methode zum Veröffentlichen von Steuerbefehlen auf dem Broker */
@@ -49,7 +47,6 @@ export function useMqtt(): QuizData {
   const [scores,    setScores]        = useState<Scores | null>(null);
   const [answerCount,   setAnswerCount]   = useState<AnswerCount | null>(null);
   const [players,       setPlayers]       = useState<Players | null>(null);
-  const [questionSets,  setQuestionSets]  = useState<QuestionSets | null>(null);
 
   useEffect(() => {
     // 1. Verbindung zum MQTT-Broker über WebSockets herstellen
@@ -66,7 +63,6 @@ export function useMqtt(): QuizData {
         "quiz/scores",
         "quiz/answer_count",
         "quiz/players",
-        "quiz/question_sets",
       ]);
     });
 
@@ -84,7 +80,6 @@ export function useMqtt(): QuizData {
         if (topic === "quiz/scores")       setScores(data);
         if (topic === "quiz/answer_count")   setAnswerCount(data);
         if (topic === "quiz/players")        setPlayers(data);
-        if (topic === "quiz/question_sets")  setQuestionSets(data);
       } catch {
         // Ignoriere fehlerhafte JSON-Nachrichten
       }
@@ -101,5 +96,5 @@ export function useMqtt(): QuizData {
     clientRef.current?.publish(topic, JSON.stringify(payload));
   };
 
-  return { connected, gameState, question, reveal, scores, answerCount, players, questionSets, publish };
+  return { connected, gameState, question, reveal, scores, answerCount, players, publish };
 }

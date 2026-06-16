@@ -20,7 +20,7 @@ import styles from "@/components/screens/screens.module.css";
  */
 export default function BeamerPage() {
   // MQTT-Verbindung aufbauen und Zustände abfragen
-  const { connected, gameState, question, reveal, scores, answerCount, players, questionSets, publish } = useMqtt();
+  const { connected, gameState, question, reveal, scores, answerCount, players, publish } = useMqtt();
 
   const lobbyPlayers  = players?.players    ?? [];
   const minPlayers    = players?.min_players ?? 2;
@@ -43,22 +43,13 @@ export default function BeamerPage() {
     publish("quiz/control", { action: "restart" });
   }, [publish]);
 
-  /**
-   * Lädt ein anderes Fragenset über den Game Master.
-   */
-  const handleLoadSet = useCallback((name: string) => {
-    publish("quiz/control", { action: "load_set", name });
-  }, [publish]);
-
   // Standard-Lobby-Screen als Fallback-Element
   const waitingScreen = (
     <WaitingScreen
       players={lobbyPlayers}
       minPlayers={minPlayers}
       gameState={currentState}
-      questionSets={questionSets}
       onStart={handleStart}
-      onLoadSet={handleLoadSet}
     />
   );
 

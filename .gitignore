@@ -9,6 +9,10 @@
 ehthumbs.db
 Thumbs.db
 Icon?
+course_files/*
+*.code-workspace
+.claude/*
+.github/copilot-instructions.md
 
 # ==========================================
 # 2. IDEs & Editors

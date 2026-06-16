@@ -63,67 +63,6 @@
   cursor: not-allowed;
 }
 
-.setLabel {
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin: 0 0 0.25rem;
-}
-
-/* ── Fragen-Set-Auswahl ── */
-.setSelector {
-  min-width: 260px;
-  max-width: 500px;
-  width: 100%;
-  margin-top: 1rem;
-  padding: 0.9rem 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.setChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.setChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.setChip:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: rgba(108, 99, 255, 0.1);
-}
-.setChip:disabled { cursor: default; }
-
-.setChipActive {
-  border-color: var(--accent);
-  background: rgba(108, 99, 255, 0.18);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.setChipCount {
-  font-size: 0.75rem;
-  color: var(--muted);
-  background: var(--surface);
-  border-radius: 1rem;
-  padding: 0.05rem 0.4rem;
-}
-
 @keyframes popIn {
   from { transform: scale(0.85); opacity: 0; }
   to   { transform: scale(1);    opacity: 1; }

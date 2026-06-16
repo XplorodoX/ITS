@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useMqtt } from "@/hooks/useMqtt";
 import styles from "./admin.module.css";
+
+const STATE_LABELS: Record<string, string> = {
+  WAITING:  "Wartet",
+  QUESTION: "Frage wird angezeigt",
+  VOTING:   "Abstimmung läuft",
+  REVEAL:   "Auflösung",
+  SCORES:   "Punktestand",
+  ENDED:    "Beendet",
+};
 
 // ── Typdefinitionen ───────────────────────────────────────────────────────────
 
@@ -145,8 +155,37 @@ export default function AdminPage() {
   const [status,      setStatus]      = useState<{ msg: string; ok: boolean } | null>(null);
   const dragFrom = useRef<number | null>(null);
 
+  // Live-Spielzustand & Teilnehmer kommen über MQTT, genau wie auf dem Beamer
+  const { gameState, players, publish } = useMqtt();
+  const currentState = gameState?.state ?? "WAITING";
+  const allPlayers    = players?.players     ?? [];
+  const minPlayers    = players?.min_players ?? 1;
+  const onlineCount   = allPlayers.filter(p => p.online).length;
+
+  const canStart   = currentState === "WAITING" && onlineCount >= minPlayers;
+  const canEnd     = currentState !== "WAITING" && currentState !== "ENDED";
+  const canRestart = currentState === "WAITING" || currentState === "ENDED";
+
   // Sets beim ersten Rendern laden
   useEffect(() => { loadSets(); }, []);
+
+  /** Sendet ein Steuerkommando (start/end/restart) an den Game Master */
+  function sendControl(action: string) {
+    publish("quiz/control", { action });
+  }
+
+  /** Benennt ein verbundenes Gerät über den Game Master um */
+  function renameDevice(deviceId: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    publish("quiz/rename/set", { device_id: deviceId, name: trimmed });
+  }
+
+  /** Entfernt ein Gerät aus der Teilnehmerliste (Kick) */
+  function removeDevice(deviceId: string, name: string) {
+    if (!confirm(`'${name}' (${deviceId}) aus der Teilnehmerliste entfernen?`)) return;
+    publish("quiz/remove/set", { device_id: deviceId });
+  }
 
   /** Shows status message in UI for 3s */
   function flash(msg: string, ok = true) {
@@ -296,6 +335,21 @@ export default function AdminPage() {
       <header className={styles.header}>
         <h1 className={styles.title}>Quiz Admin</h1>
         <span className={styles.apiUrl}>{API}</span>
+
+        <div className={styles.gameControl}>
+          <span className={styles.stateBadge}>{STATE_LABELS[currentState] ?? currentState}</span>
+          <span className={styles.onlineBadge}>{onlineCount} online</span>
+          <button className={styles.btnControl} disabled={!canStart} onClick={() => sendControl("start")}>
+            ▶ Starten
+          </button>
+          <button className={styles.btnControlDanger} disabled={!canEnd} onClick={() => sendControl("end")}>
+            ■ Beenden
+          </button>
+          <button className={styles.btnControl} disabled={!canRestart} onClick={() => sendControl("restart")}>
+            ↺ Neustart
+          </button>
+        </div>
+
         {status && (
           <span className={`${styles.status} ${status.ok ? styles.statusOk : styles.statusErr}`}>
             {status.msg}
@@ -306,6 +360,37 @@ export default function AdminPage() {
       <div className={styles.layout}>
         {/* ── Linke Spalte: Set-Liste ── */}
         <aside className={styles.sidebar}>
+          <h2 className={styles.sidebarTitle}>Teilnehmer ({allPlayers.length})</h2>
+          <ul className={styles.playerList}>
+            {allPlayers.length === 0 ? (
+              <p className={styles.placeholderSmall}>Noch keine Geräte verbunden.</p>
+            ) : (
+              allPlayers.map(p => (
+                <li key={p.device_id} className={styles.playerRow}>
+                  <span className={`${styles.playerDot} ${p.online ? styles.playerDotOnline : ""}`} />
+                  <div className={styles.playerInfo}>
+                    <input
+                      className={styles.playerNameInput}
+                      defaultValue={p.name}
+                      key={p.name}
+                      maxLength={15}
+                      onBlur={e => renameDevice(p.device_id, e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                    />
+                    <span className={styles.playerDeviceId}>{p.device_id}</span>
+                  </div>
+                  <button
+                    className={styles.btnRemovePlayer}
+                    title="Teilnehmer entfernen"
+                    onClick={() => removeDevice(p.device_id, p.name)}
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+
           <h2 className={styles.sidebarTitle}>Fragen-Sets</h2>
           <ul className={styles.setList}>
             {sets.map(s => (

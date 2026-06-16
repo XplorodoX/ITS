@@ -58,15 +58,15 @@ Connecting to AALeC-Quiz ...
 WiFi connected. IP: 192.168.4.2
 [MQTT] connected as aAlec-XXXXXX
 Schritt 5 — Spiel starten
-Das Spiel startet aktuell automatisch (wegen --auto-start), wartet aber auf Spieler. Du brauchst einen MQTT-Start-Trigger. Einfachste Methode — direkt per mosquitto_pub ein Spiel-Start-Signal injizieren:
+Das Spiel wird vollständig über MQTT gesteuert. Du kannst es entweder über den Start-Button auf der Beamer-Lobby des Frontends starten oder manuell ein Signal über MQTT senden:
 
-Da der Game Master derzeit nur über [s]-Tastatur oder Code startet, kannst du einen schnellen Workaround nutzen — ein quiz/cmd-Topic. Ich kann das einbauen wenn du willst. Alternativ: den Container kurz interaktiv starten:
+```bash
+# Spiel starten per MQTT:
+mosquitto_pub -h 127.0.0.1 -p 1883 -t "quiz/control" -m '{"action":"start"}'
 
-
-# Game-Master-Container interaktiv mit Terminal:
-podman exec -it its_game-master_1 python game_master.py \
-  --broker mosquitto --questions questions.json
-Dann s + Enter → Spiel startet.
+# Spiel neustarten/zurücksetzen per MQTT:
+mosquitto_pub -h 127.0.0.1 -p 1883 -t "quiz/control" -m '{"action":"restart"}'
+```
 
 Schritt 6 — Ablauf beobachten
 

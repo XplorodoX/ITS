@@ -527,8 +527,8 @@ void showNameSelect() {
   aalec.reset_rotate(0);
 
   while (true) {
-    checkConnection();
-    mqtt.loop();
+    // In der Namenseingabe überspringen wir checkConnection und mqtt.loop,
+    // da diese bei Verbindungsaufbau blockieren und die Drehgeber-Eingabe verzögern.
 
     if (aalec.rotate_changed()) {
       int rot = aalec.get_rotate();
@@ -880,6 +880,7 @@ void showPotiTarget() {
     //aalec.display.drawLine(targetX, 52, targetX, 64);
 
     displayShow();
+    delay(20);
   }
 }
 
@@ -948,6 +949,7 @@ void showTempTarget() {
       aalec.display.fillRect(barCenter + deviation, 54, -deviation, 8);
 
     displayShow();
+    delay(20);
   }
 }
 
@@ -1357,12 +1359,17 @@ bool handleConnectionLoss() {
 
 // Prüft WiFi (mit Debounce) und MQTT getrennt.
 // WiFi-Flicker (kurzes WL_DISCONNECTED) löst keinen Reconnect aus.
+// Reconnect-Versuche sind rate-limited (5s), um CPU-Blockaden zu verhindern.
 void checkConnection() {
   if (isHosting) {
     // Als Host bleiben wir trotzdem MQTT-Client und spielen mit.
     if (!mqtt.connected()) {
-      Serial.println("[MQTT] Host-Modus ohne MQTT — reconnect …");
-      mqttReconnect();
+      static unsigned long lastHostRetry = 0;
+      if (millis() - lastHostRetry >= 5000) {
+        lastHostRetry = millis();
+        Serial.println("[MQTT] Host-Modus ohne MQTT — reconnect …");
+        mqttReconnect();
+      }
     }
     return;
   }
@@ -1379,8 +1386,12 @@ void checkConnection() {
 
   // WiFi ist ok — prüfe MQTT separat
   if (!mqtt.connected()) {
-    Serial.println("[MQTT] Verbindung verloren — reconnect …");
-    mqttReconnect();
+    static unsigned long lastMqttRetry = 0;
+    if (millis() - lastMqttRetry >= 5000) {
+      lastMqttRetry = millis();
+      Serial.println("[MQTT] Verbindung verloren — reconnect …");
+      mqttReconnect();
+    }
   }
 }
 
@@ -1390,7 +1401,9 @@ void setup() {
   delay(100);
   EEPROM.begin(EEPROM_SIZE);
   loadNameFromEEPROM();
-  deviceId = "aAlec-" + String(ESP.getChipId(), HEX);
+  char chipIdHex[7];
+  sprintf(chipIdHex, "%06X", ESP.getChipId());
+  deviceId = "aAlec-" + String(chipIdHex);
   Serial.println("\n\n===== AALeC Quiz =====");
   Serial.print("[BOOT] Device ID: ");
   Serial.println(deviceId);

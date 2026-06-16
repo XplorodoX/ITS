@@ -7,6 +7,12 @@
   justify-content: center;
   padding: 3rem 4rem;
   gap: 2rem;
+  animation: screenFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes screenFadeIn {
+  from { opacity: 0; transform: translateY(15px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ── Waiting ────────────────────────────────────────────────────────── */
@@ -90,6 +96,22 @@
   transition: transform 1s linear;
 }
 
+.timerBadge.critical {
+  color: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.45);
+  animation: timerPulse 0.5s ease infinite alternate;
+}
+
+.timerBadge.critical::after {
+  background: var(--red);
+}
+
+@keyframes timerPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
 .questionProgress {
   font-size: 0.95rem;
   font-weight: 700;
@@ -136,11 +158,20 @@
   border: 2px solid var(--border);
   border-radius: 1rem;
   padding: 1.25rem 1.75rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  animation: cardFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s);
 }
 
 .optionCard:hover {
   border-color: var(--opt-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .optionKey {
@@ -169,6 +200,13 @@
   grid-template-columns: 2.5rem 1fr auto auto;
   align-items: center;
   gap: 1rem;
+  animation: rowFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s);
+}
+
+@keyframes rowFadeIn {
+  from { opacity: 0; transform: translateX(-15px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .barKey {
@@ -250,13 +288,30 @@
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 0.75rem 1.25rem;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease, border-color 0.2s;
+  animation: rowFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s);
 }
 
 .scoreRowFirst {
   border-color: #eab308;
-  background: #1a1a0f;
+  background: linear-gradient(135deg, #252109 0%, #151408 50%, #252109 100%);
+  background-size: 200% 200%;
+  animation: rowFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both, goldShimmer 3s ease infinite;
+  animation-delay: calc(var(--i, 0) * 0.08s), 0s;
   transform: scale(1.02);
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.12);
+}
+
+.scoreRowFirst:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.25);
+}
+
+@keyframes goldShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .scoreRank {
@@ -348,6 +403,8 @@
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 0.6rem 1rem;
+  animation: rowFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s);
 }
 
 .estimateRank  { font-size: 1.1rem; color: var(--muted); }

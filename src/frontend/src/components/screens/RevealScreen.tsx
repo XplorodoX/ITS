@@ -24,7 +24,11 @@ export default function RevealScreen({ question, reveal }: Props) {
         </div>
         <div className={styles.estimateList}>
           {reveal.answers.slice(0, 8).map((a, i) => (
-            <div key={a.device_id} className={styles.estimateRow}>
+            <div
+              key={a.device_id}
+              className={styles.estimateRow}
+              style={{ "--i": i } as React.CSSProperties}
+            >
               <span className={styles.estimateRank}>{i + 1}.</span>
               <span className={styles.estimateName}>{a.name}</span>
               <span className={styles.estimateValue}>{a.value}{reveal.unit ? ` ${reveal.unit}` : ""}</span>
@@ -54,7 +58,11 @@ export default function RevealScreen({ question, reveal }: Props) {
         </div>
         <div className={styles.estimateList}>
           {reveal.answers.slice(0, 8).map((a, i) => (
-            <div key={a.device_id} className={styles.estimateRow}>
+            <div
+              key={a.device_id}
+              className={styles.estimateRow}
+              style={{ "--i": i } as React.CSSProperties}
+            >
               <span className={styles.estimateRank}>{i + 1}.</span>
               <span className={styles.estimateName}>{a.name}</span>
               <span className={styles.estimateValue}>{a.value}%</span>
@@ -84,7 +92,11 @@ export default function RevealScreen({ question, reveal }: Props) {
         </div>
         <div className={styles.estimateList}>
           {reveal.answers.slice(0, 8).map((a, i) => (
-            <div key={a.device_id} className={styles.estimateRow}>
+            <div
+              key={a.device_id}
+              className={styles.estimateRow}
+              style={{ "--i": i } as React.CSSProperties}
+            >
               <span className={styles.estimateRank}>{i + 1}.</span>
               <span className={styles.estimateName}>{a.name}</span>
               <span className={styles.estimateValue}>{a.value.toFixed(1)} °C</span>
@@ -118,7 +130,11 @@ export default function RevealScreen({ question, reveal }: Props) {
             const count   = reveal.counts[key];
             const pct     = Math.round((count / total) * 100);
             return (
-              <div key={key} className={styles.barRow}>
+              <div
+                key={key}
+                className={styles.barRow}
+                style={{ "--i": key === "HIGHER" ? 0 : 1 } as React.CSSProperties}
+              >
                 <span className={`${styles.barKey} ${correct ? styles.barKeyCorrect : ""}`}
                   style={{ "--opt-color": key === "HIGHER" ? "#22c55e" : "#ef4444" } as React.CSSProperties}>
                   {key === "HIGHER" ? "↑" : "↓"}
@@ -154,7 +170,11 @@ export default function RevealScreen({ question, reveal }: Props) {
           const pct     = Math.round((count / total) * 100);
           const correct = key === reveal.correct;
           return (
-            <div key={key} className={styles.barRow}>
+            <div
+              key={key}
+              className={styles.barRow}
+              style={{ "--i": i } as React.CSSProperties}
+            >
               <span
                 className={`${styles.barKey} ${correct ? styles.barKeyCorrect : ""}`}
                 style={{ "--opt-color": COLORS[i] } as React.CSSProperties}

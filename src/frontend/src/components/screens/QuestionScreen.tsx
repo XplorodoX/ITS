@@ -44,7 +44,10 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
         <span className={styles.questionProgress}>{question.id} / {question.total}</span>
       )}
       {voting && (
-        <span className={styles.timerBadge} style={{ "--pct": pct } as React.CSSProperties}>
+        <span
+          className={`${styles.timerBadge} ${countdown <= 5 ? styles.critical : ""}`}
+          style={{ "--pct": pct } as React.CSSProperties}
+        >
           {countdown}s
         </span>
       )}
@@ -133,7 +136,7 @@ export default function QuestionScreen({ question, remainingS, voting, answerCou
           <div
             key={key}
             className={styles.optionCard}
-            style={{ "--opt-color": COLORS[i] } as React.CSSProperties}
+            style={{ "--opt-color": COLORS[i], "--i": i } as React.CSSProperties}
           >
             <span className={styles.optionKey}>{key}</span>
             <span className={styles.optionText}>{(question as Extract<typeof question, { options: unknown }>).options[key]}</span>

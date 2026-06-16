@@ -8,7 +8,7 @@ Dieses Repository enthält das **AALeC Quiz**, ein lokales Echtzeit-Multiplayer-
 
 Das System teilt sich in drei Hauptkomponenten auf:
 
-1. **Hardware & Firmware (`src/firmware/Joahatunrecht`)**:
+1. **Hardware & Firmware (`src/firmware/Controller`)**:
    * ESP8266-basierte AALeC-V3 Controller, die sich mit dem WLAN-Hotspot verbinden und Eingaben (Drehgeber, Potentiometer, Temperatursensor) erfassen.
    * Kommunikation erfolgt in Echtzeit über **MQTT**.
 2. **Backend / Game Master (`src/backend`)**:
@@ -23,7 +23,7 @@ Das System teilt sich in drei Hauptkomponenten auf:
 
 * [src/backend](file:///Users/merluee/ITS/src/backend) — Python Game Master, REST-API und Fragensets.
 * [src/frontend](file:///Users/merluee/ITS/src/frontend) — Next.js Beamer-Projektor-Anwendung.
-* [src/firmware/Joahatunrecht](file:///Users/merluee/ITS/src/firmware/Joahatunrecht) — PlatformIO C++ Firmware für die AALeC-Clients.
+* [src/firmware/Controller](file:///Users/merluee/ITS/src/firmware/Controller) — PlatformIO C++ Firmware für die AALeC-Clients.
 * [src/firmware/Hotspot](file:///Users/merluee/ITS/src/firmware/Hotspot) — Firmware für den Arduino Uno R4, der den WLAN-Hotspot aufspannt.
 * [.github/workflows](file:///Users/merluee/ITS/.github/workflows) — CI/CD Workflows für automatisierte Builds und Releases.
 * [docs](file:///Users/merluee/ITS/docs) — Weiterführende Dokumentationen und Anleitungen.
@@ -43,7 +43,7 @@ Damit du den Code auf den AALeC-Geräten nicht bei jedem Wechsel der IP-Adresse 
    ```
 2. Kopiere die Konfigurationsdatei im Firmware-Ordner:
    ```bash
-   cp src/firmware/Joahatunrecht/src/config.h.example src/firmware/Joahatunrecht/src/config.h
+   cp src/firmware/Controller/src/config.h.example src/firmware/Controller/src/config.h
    ```
 3. Passe in der neuen `config.h` den Hostnamen an (füge `.local` an deinen Mac-Namen an):
    ```cpp
@@ -63,7 +63,7 @@ Dies startet:
 ### Schritt 3: Firmware flashen
 1. Verbinde das AALeC-Gerät per USB mit deinem Mac.
 2. Verbinde deinen Mac mit dem WLAN-Hotspot **`AALeC-Quiz`** (Passwort: `12345678`).
-3. Öffne PlatformIO und führe den **Upload** für das Projekt `Joahatunrecht` aus.
+3. Öffne PlatformIO und führe den **Upload** für das Projekt `Controller` aus.
 
 ---
 

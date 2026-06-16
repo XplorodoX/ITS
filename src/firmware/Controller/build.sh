@@ -22,8 +22,8 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-IMAGE=joahatunrecht-builder
-VOLUME=joahatunrecht-pio-cache
+IMAGE=controller-builder
+VOLUME=controller-pio-cache
 
 podman image exists "$IMAGE" || podman build -t "$IMAGE" -f Containerfile .
 podman volume exists "$VOLUME" || podman volume create "$VOLUME"

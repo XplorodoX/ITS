@@ -1,4 +1,4 @@
-# Joahatunrecht (AALeC Firmware)
+# Controller (AALeC Firmware)
 
 PlatformIO project for the AALeC V3 (ESP8266 / esp12e) board, built with the
 Arduino framework.
@@ -42,7 +42,7 @@ emulation needed.
 
 `build.sh` builds a small `python:3.11-slim`-based image (see
 `Containerfile`) on first use, and caches PlatformIO packages in a podman
-volume (`joahatunrecht-pio-cache`) so the toolchain/libs aren't re-downloaded
+volume (`controller-pio-cache`) so the toolchain/libs aren't re-downloaded
 on every build.
 
 **Flashing doesn't happen through `build.sh`** — podman on macOS can't pass

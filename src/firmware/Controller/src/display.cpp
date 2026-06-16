@@ -97,6 +97,9 @@ void showNameSelect() {
   aalec.button_changed(); // Sync/consume button state to avoid registering initial press as a character select click
 
   while (true) {
+    checkConnection();
+    mqtt.loop();
+
     if (aalec.rotate_changed()) {
       int rot = aalec.get_rotate();
       idx[cursor] = (idx[cursor] + (rot > 0 ? -1 : 1) + charsetLen) % charsetLen;
@@ -175,6 +178,7 @@ void showWaiting() {
   while (quizState == STATE_WAITING) {
     checkConnection();
     mqtt.loop();
+    aalec.button_changed(); // Sync the library button state tracker to prevent ghost clicks later
 
     // Kein Name gesetzt -> lokale Namenseingabe anzeigen
     if (strlen(playerName) == 0) {

@@ -47,6 +47,8 @@ T_CONTROL      = "quiz/control"       # Steuerbefehle (Start, Restart, etc.) vom
 T_NAMELIST     = "quiz/namelist"      # Liste verfügbarer Namen für Controller-Displays (retained)
 T_NAMELIST_SET = "quiz/namelist/set"  # Setzen der Namensliste durch das Admin-Frontend
 T_NAME_RESET   = "quiz/name/reset"    # Befehl zum Zurücksetzen der manuellen Namenswahl
+T_RENAME_SET   = "quiz/rename/set"    # Umbenennen eines einzelnen Geräts durch das Admin-Frontend
+T_REMOVE_SET   = "quiz/remove/set"    # Entfernen (Kick) eines Geräts durch das Admin-Frontend
 
 MIN_PLAYERS = 1  # Mindestanzahl Spieler, um das Quiz zu starten
 
@@ -178,7 +180,9 @@ def _api_question_set(name: str):
         qs = request.get_json(silent=True)
         if not isinstance(qs, list):
             return jsonify({"error": "body must be a JSON array"}), 400
-        errs = _collect_question_errors(qs)
+        # Ein leeres Set ist als Entwurf erlaubt (z. B. direkt nach dem Anlegen).
+        # Erst beim Aktivieren (load_set) wird ein nicht-leeres, valides Set verlangt.
+        errs = _collect_question_errors(qs) if qs else []
         if errs:
             return jsonify({"errors": errs}), 422
         # Atomares Schreiben über temporäre Datei
@@ -416,6 +420,8 @@ class GameMaster:
         client.subscribe(T_DISCONNECT)
         client.subscribe(T_CONTROL)
         client.subscribe(T_NAMELIST_SET)
+        client.subscribe(T_RENAME_SET)
+        client.subscribe(T_REMOVE_SET)
         # Aktuellen Zustand pushen
         self._publish_state()
         self._publish_players()
@@ -448,6 +454,10 @@ class GameMaster:
             self._handle_control(data)
         elif topic == T_NAMELIST_SET:
             self._handle_namelist(data)
+        elif topic == T_RENAME_SET:
+            self._handle_rename(data)
+        elif topic == T_REMOVE_SET:
+            self._handle_remove(data)
 
     # ── Device Lifecycle ──────────────────────────────────────────────────────
 
@@ -476,6 +486,7 @@ class GameMaster:
             self.players[device_id].online = False
             print(f"[disconnect] {device_id} offline  ({self._online_count()} online)")
         self._publish_players()
+        self._abort_if_no_players()
 
     def _online_count(self) -> int:
         """Gibt die Anzahl der aktuell verbundenen Spieler zurück.
@@ -495,6 +506,9 @@ class GameMaster:
         elif action == "restart":
             print("[control] restart requested via MQTT")
             self.restart_game()
+        elif action == "end":
+            print("[control] end requested via MQTT")
+            self.end_game()
         elif action == "reset_names":
             print("[control] device name reset requested via MQTT")
             self._publish(T_NAME_RESET, {"reset": True, "source": "beamer"})
@@ -513,6 +527,31 @@ class GameMaster:
         names = [str(n)[:15] for n in names[:20]]
         print(f"[namelist] relaying {len(names)} names to devices: {names}")
         self.client.publish(T_NAMELIST, json.dumps({"names": names}), retain=True)
+
+    @_locked
+    def _handle_rename(self, data: dict):
+        """Benennt ein bereits verbundenes Gerät über das Admin-Frontend um."""
+        device_id = str(data.get("device_id", ""))
+        name      = str(data.get("name", "")).strip()[:15]
+        if not name or device_id not in self.players:
+            print(f"[rename] invalid request: {data}")
+            return
+        self.players[device_id].name = name
+        print(f"[rename] {device_id} -> '{name}'")
+        self._publish_players()
+        self._save_state()
+
+    @_locked
+    def _handle_remove(self, data: dict):
+        """Entfernt ein Gerät vollständig aus der Spielerliste (Kick durch das Admin-Frontend)."""
+        device_id = str(data.get("device_id", ""))
+        if device_id not in self.players:
+            print(f"[remove] unknown device: {device_id}")
+            return
+        del self.players[device_id]
+        print(f"[remove] {device_id} removed from player list")
+        self._publish_players()
+        self._save_state()
 
     # ── Answer Handling ───────────────────────────────────────────────────────
 
@@ -890,16 +929,40 @@ class GameMaster:
 
     # ── Scores and Game End ───────────────────────────────────────────────────
 
-    @_locked
-    def _transition_to_scores(self):
-        """Wechselt in die Leaderboard-Ansicht (SCORES)."""
-        self.gs.state = "SCORES"
-        scoreboard = sorted(
+    def _build_scoreboard(self) -> list[dict]:
+        """Baut das nach Punkten sortierte Leaderboard aus der aktuellen Spielerliste."""
+        return sorted(
             [{"device_id": p.device_id, "name": p.name, "score": p.score, "streak": p.streak}
              for p in self.players.values()],
             key=lambda x: x["score"],
             reverse=True,
         )
+
+    @_locked
+    def _abort_if_no_players(self):
+        """Bricht ein laufendes Quiz ab, sobald kein Spieler mehr online ist.
+
+        Zeigt dabei den aktuellen Endstand (ENDED + Scoreboard), statt das Spiel
+        ohne Publikum stillschweigend weiterlaufen zu lassen.
+        """
+        if self.gs.state in ("WAITING", "ENDED"):
+            return
+        if self._online_count() > 0:
+            return
+        print("[game] no players online — aborting quiz, showing final scoreboard")
+        if self._timer:
+            self._timer.cancel()
+            self._timer = None
+        self._publish(T_SCORES, {"scores": self._build_scoreboard()})
+        self.gs.state = "ENDED"
+        self._publish_state()
+        self._save_state()
+
+    @_locked
+    def _transition_to_scores(self):
+        """Wechselt in die Leaderboard-Ansicht (SCORES)."""
+        self.gs.state = "SCORES"
+        scoreboard = self._build_scoreboard()
         self._publish(T_SCORES, {"scores": scoreboard})
         self._publish_state()
         print(f"[scores] {scoreboard}")
@@ -920,6 +983,17 @@ class GameMaster:
         self._publish_state()
         self._save_state()
         print("[game] ended")
+
+    @_locked
+    def end_game(self):
+        """Beendet ein laufendes Quiz vorzeitig (Sprung direkt nach ENDED)."""
+        if self.gs.state in ("WAITING", "ENDED"):
+            print(f"[game] nothing to end — state is {self.gs.state}")
+            return
+        if self._timer:
+            self._timer.cancel()
+            self._timer = None
+        self._transition_to_ended()
 
     @_locked
     def restart_game(self):

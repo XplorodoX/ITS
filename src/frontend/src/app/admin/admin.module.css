@@ -47,6 +47,55 @@
 .statusOk  { background: #14532d; color: #86efac; }
 .statusErr { background: #450a0a; color: #fca5a5; }
 
+/* ── Spielsteuerung ─────────────────────────────────────────────────────────── */
+
+.gameControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stateBadge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  background: rgba(108, 99, 255, 0.12);
+  border-radius: 1rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.onlineBadge {
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.btnControl, .btnControlDanger {
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.4rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  background: #238636;
+}
+.btnControl:hover:not(:disabled) { background: #2ea043; }
+
+.btnControlDanger { background: #b91c1c; }
+.btnControlDanger:hover:not(:disabled) { background: #dc2626; }
+
+.btnControl:disabled, .btnControlDanger:disabled {
+  background: #21262d;
+  color: #6e7681;
+  cursor: not-allowed;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 240px 1fr;
@@ -142,6 +191,89 @@
 }
 .btnActivate:hover { color: var(--green); background: rgba(34,197,94,.1); }
 .btnDelete:hover   { color: var(--red);   background: rgba(239,68,68,.1); }
+
+/* ── Teilnehmerliste ────────────────────────────────────────────────────────── */
+
+.placeholderSmall {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.playerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.playerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.playerDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #6e7681;
+  flex-shrink: 0;
+}
+
+.playerDotOnline {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.playerInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.playerNameInput {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  padding: 0;
+  width: 100%;
+}
+.playerNameInput:focus {
+  outline: none;
+  border-bottom: 1px solid var(--accent);
+}
+
+.playerDeviceId {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btnRemovePlayer {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.3rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+.btnRemovePlayer:hover { color: var(--red); background: rgba(239, 68, 68, 0.1); }
 
 .newSetForm {
   display: flex;

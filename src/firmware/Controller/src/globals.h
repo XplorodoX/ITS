@@ -16,7 +16,6 @@
 
 // ===== Player Info =====
 extern char playerName[6];
-extern const unsigned long NAME_RESET_HOLD_MS;
 
 // ===== Names List =====
 #define MAX_NAMES      20
@@ -102,7 +101,6 @@ void soundWinner();
 // Display Module
 void displayShow();
 void drawSpinner(int cx, int cy, int r, int frame);
-void drawProgressBar(int x, int y, int w, int h, int percent);
 void pulseLEDs(unsigned long t, RgbColor base);
 void showConnectingFrame(RgbColor ledColor = c_blue);
 void showConnected();

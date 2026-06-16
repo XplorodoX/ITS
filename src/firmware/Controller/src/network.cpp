@@ -264,6 +264,12 @@ void connectMqttAsPlayer() {
 static uint8_t _wifiFailCount = 0;
 static const uint8_t WIFI_FAIL_THRESHOLD = 3;
 
+// Wenn WLAN ok ist, aber der MQTT-Broker/Server seit MQTT_LOST_TIMEOUT_MS nicht
+// erreichbar war, geben wir die aktuelle Runde auf und gehen zurück in die Lobby,
+// statt für immer im aktuellen Spielzustand (z.B. Voting/Reveal) hängen zu bleiben.
+static unsigned long _mqttLostSinceMs = 0;
+static const unsigned long MQTT_LOST_TIMEOUT_MS = 8000;
+
 bool handleConnectionLoss() {
   Serial.println("[WiFi] Verbindung verloren — starte Reconnect");
   mqtt.disconnect();
@@ -327,11 +333,20 @@ void checkConnection() {
   _wifiFailCount = 0;
 
   if (!mqtt.connected()) {
+    if (_mqttLostSinceMs == 0) _mqttLostSinceMs = millis();
+
     static unsigned long lastMqttRetry = 0;
     if (millis() - lastMqttRetry >= 5000) {
       lastMqttRetry = millis();
       Serial.println("[MQTT] Verbindung verloren — reconnect …");
       mqttReconnect();
     }
+
+    if (quizState != STATE_WAITING && millis() - _mqttLostSinceMs >= MQTT_LOST_TIMEOUT_MS) {
+      Serial.println("[MQTT] Server seit längerem nicht erreichbar — zurück in die Lobby");
+      quizState = STATE_WAITING;
+    }
+  } else {
+    _mqttLostSinceMs = 0;
   }
 }

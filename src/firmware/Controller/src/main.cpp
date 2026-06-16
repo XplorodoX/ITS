@@ -16,7 +16,6 @@
 
 // Player Info
 char playerName[6] = "";   // gewählter Name, leer = noch nicht gesetzt
-const unsigned long NAME_RESET_HOLD_MS = 3000;
 
 // Names List
 char nameList[MAX_NAMES][MAX_NAME_LEN];

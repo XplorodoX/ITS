@@ -1,6 +1,6 @@
 "use client";
 
-import type { LobbyPlayer, QuestionSets } from "@/types/quiz";
+import type { LobbyPlayer } from "@/types/quiz";
 import styles from "./screens.module.css";
 import lobbyStyles from "./LobbyScreen.module.css";
 
@@ -11,22 +11,17 @@ interface Props {
   minPlayers: number;
   /** Der aktuelle Zustand des Spiels (muss WAITING sein) */
   gameState: string;
-  /** Die vom Game Master gelieferten verfügbaren Fragensets */
-  questionSets: QuestionSets | null;
   /** Callback zum Starten des Spiels (Übergang zu QUESTION) */
   onStart: () => void;
-  /** Callback zum Wechseln des aktiven Fragensets */
-  onLoadSet: (name: string) => void;
 }
 
 /**
  * WaitingScreen Komponente (Lobby).
  *
  * Wartet auf die Verbindung der Controller. Zeigt die verbundenen Spieler
- * als Chips mit Online-Statuspunkten an. Ermöglicht dem Spielleiter, vor Spielstart
- * das aktive Fragenset auszuwählen und das Quiz zu starten.
+ * als Chips mit Online-Statuspunkten an. Ermöglicht dem Spielleiter, das Quiz zu starten.
  */
-export default function WaitingScreen({ players, minPlayers, gameState, questionSets, onStart, onLoadSet }: Props) {
+export default function WaitingScreen({ players, minPlayers, gameState, onStart }: Props) {
   // Filtern nach Spielern, die gerade aktiv online sind
   const activePlayers = players.filter((p) => p.online);
   const onlineCount   = activePlayers.length;
@@ -60,34 +55,6 @@ export default function WaitingScreen({ players, minPlayers, gameState, question
           ))
         )}
       </div>
-
-      {/* ── Fragen-Set Auswahl ── */}
-      {gameState === "WAITING" && questionSets && (
-        <div className={lobbyStyles.setSelector}>
-          <p className={lobbyStyles.setLabel}>
-            Fragen-Set:
-            <strong style={{ marginLeft: "0.5rem", color: "var(--accent)" }}>
-              {questionSets.active}
-            </strong>
-          </p>
-          {/* Zeigt die Chips zur Schnellauswahl nur an, wenn mehr als ein Set existiert */}
-          {questionSets.sets.length > 1 && (
-            <div className={lobbyStyles.setChips}>
-              {questionSets.sets.map(s => (
-                <button
-                  key={s.name}
-                  className={`${lobbyStyles.setChip} ${s.active ? lobbyStyles.setChipActive : ""}`}
-                  onClick={() => !s.active && onLoadSet(s.name)}
-                  disabled={s.active}
-                >
-                  {s.name}
-                  <span className={lobbyStyles.setChipCount}>{s.count}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Start-Aktionen ── */}
       {gameState === "WAITING" && (

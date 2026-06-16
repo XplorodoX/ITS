@@ -22,13 +22,6 @@ void drawSpinner(int cx, int cy, int r, int frame) {
   }
 }
 
-void drawProgressBar(int x, int y, int w, int h, int percent) {
-  int filled = map(percent, 0, 100, 0, w);
-  aalec.display.setColor(WHITE);
-  aalec.display.drawRect(x, y, w, h);
-  if (filled > 0) aalec.display.fillRect(x, y, filled, h);
-}
-
 void pulseLEDs(unsigned long t, RgbColor base) {
   float s = 0.6f + 0.4f * sin(t / 400.0);
   RgbColor c = { (uint8_t)(base.r * s), (uint8_t)(base.g * s), (uint8_t)(base.b * s) };
@@ -171,18 +164,11 @@ void showNameSelect() {
 
 void showWaiting() {
   unsigned long lastUpdate = 0;
-  int clickCount = 0;
-  unsigned long lastPressTime = 0;
-  unsigned long lastPressedMs = 0;
-  bool waitForButtonReleaseAfterReset = false;
 
   while (quizState == STATE_WAITING) {
     checkConnection();
     mqtt.loop();
-    
-    int btn = aalec.get_button();
-    bool changed = aalec.button_changed(); // Sync the library button state tracker to prevent ghost clicks later
-    unsigned long now = millis();
+    aalec.button_changed(); // Sync the library button state tracker to prevent ghost clicks later
 
     // Kein Name gesetzt -> lokale Namenseingabe anzeigen
     if (strlen(playerName) == 0) {
@@ -197,88 +183,11 @@ void showWaiting() {
       continue;
     }
 
-    // Optionaler Reset: Doppel-Klick und beim zweiten Klick 1.2s gedrückt halten.
-    if (strlen(playerName) > 0) {
-      if (waitForButtonReleaseAfterReset) {
-        if (btn == 0) {
-          waitForButtonReleaseAfterReset = false;
-          clickCount = 0;
-          Serial.println("[DEBUG_BTN] waitForButtonReleaseAfterReset cleared");
-        }
-      } else {
-        // Press event
-        if (changed && btn == 1) {
-          unsigned long diff = now - lastPressTime;
-          if (diff < 50) {
-            // Ignoriere Prellen
-            Serial.println("[DEBUG_BTN] Ignored bounce press");
-          } else if (diff < 400) {
-            clickCount = 2;
-            lastPressTime = now;
-            lastPressedMs = now;
-            Serial.println("[DEBUG_BTN] Double click detected! Starting hold timer.");
-          } else {
-            clickCount = 1;
-            lastPressTime = now;
-            lastPressedMs = now;
-            Serial.println("[DEBUG_BTN] First click detected.");
-          }
-        }
-
-        // Release event timeout for first click
-        if (clickCount == 1 && btn == 0 && now - lastPressTime > 400) {
-          clickCount = 0;
-          Serial.println("[DEBUG_BTN] First click timed out (no second click).");
-        }
-
-        // Hold detection for the second click
-        if (clickCount == 2) {
-          if (btn == 1) {
-            lastPressedMs = now;
-            unsigned long holdTime = now - lastPressTime;
-            
-            // Visual feedback via LEDs: Progress 0 to 1200 ms mapped to 0 to 5 LEDs
-            int ledsToLight = map(holdTime, 0, 1200, 0, 5);
-            if (ledsToLight > 5) ledsToLight = 5;
-            for (int i = 0; i < 5; i++) {
-              if (i < ledsToLight) {
-                setLED(i, c_cyan);
-              } else {
-                setLED(i, c_off);
-              }
-            }
-
-            if (holdTime >= 1200) {
-              Serial.println("[DEBUG_BTN] Threshold reached! Resetting name per double-click + long-press");
-              clearNameInEEPROM();
-              waitForButtonReleaseAfterReset = true;
-              clickCount = 0;
-              for (int i = 0; i < 5; i++) setLED(i, c_green); // Flash green on success
-              showNameSelect();
-              nameResetRequested = false;
-              continue;
-            }
-          } else {
-            // Debounced release check during hold
-            if (now - lastPressedMs > 150) {
-              clickCount = 0;
-              for (int i = 0; i < 5; i++) setLED(i, c_off);
-              Serial.println("[DEBUG_BTN] Second click released too early.");
-            }
-          }
-        }
-      }
-    }
-
-    now = millis();
+    unsigned long now = millis();
     if (now - lastUpdate < 80) { delay(10); continue; }
     lastUpdate = now;
 
-    if (clickCount == 2 && btn == 1) {
-      // LEDs are updated in the button hold detection
-    } else {
-      pulseLEDs(now, c_cyan);
-    }
+    pulseLEDs(now, c_cyan);
 
     aalec.display.clear();
     aalec.display.setFont(ArialMT_Plain_10);
@@ -286,31 +195,15 @@ void showWaiting() {
     aalec.display.drawString(64, 0, "AALeC Quiz");
     aalec.display.drawLine(0, 13, 128, 13);
 
-    if (clickCount == 2 && btn == 1) {
-      aalec.display.setFont(ArialMT_Plain_16);
-      aalec.display.drawString(64, 16, "Name neu...");
-      int holdTime = now - lastPressTime;
-      int pct = map(holdTime, 0, 1200, 0, 100);
-      if (pct > 100) pct = 100;
-      drawProgressBar(14, 38, 100, 10, pct);
-    } else {
-      aalec.display.setFont(ArialMT_Plain_16);
-      aalec.display.drawString(64, 16, "Bereit!");
-      aalec.display.setFont(ArialMT_Plain_10);
-      aalec.display.drawString(64, 35, "Warte auf Quiz...");
-    }
+    aalec.display.setFont(ArialMT_Plain_16);
+    aalec.display.drawString(64, 16, "Bereit!");
+    aalec.display.setFont(ArialMT_Plain_10);
+    aalec.display.drawString(64, 35, "Warte auf Quiz...");
 
-    aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
-    aalec.display.drawString(0, 54, isHosting ? "[HOST]" : "[CLIENT]");
     // Dezent aktuellen Namen unten rechts anzeigen
     if (strlen(playerName) > 0) {
       aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
       aalec.display.drawString(122, 54, String(playerName));
-
-      if (clickCount != 2 || btn == 0) {
-        aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
-        aalec.display.drawString(64, 44, "2x Klick + halten: Name neu");
-      }
     }
     displayShow();
   }

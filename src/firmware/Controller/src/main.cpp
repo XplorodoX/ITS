@@ -124,12 +124,7 @@ void setup() {
 
   // Endlosschleife zur Verbindungssuche. Kein automatischer AP-Fallback mehr.
   while (WiFi.status() != WL_CONNECTED) {
-    unsigned long now = millis();
-    if (now - _connLast >= 120) {
-      showConnectingFrame(); // zeichnet den Spinner und flusht das Display intern
-      // LEDs rot pulsieren lassen, um fehlende WiFi-Verbindung zu signalisieren
-      pulseLEDs(now, c_red);
-    }
+    showConnectingFrame(c_blue);
     delay(10);
   }
 

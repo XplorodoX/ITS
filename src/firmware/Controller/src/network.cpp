@@ -275,12 +275,7 @@ bool handleConnectionLoss() {
 
   // Unbegrenzter Wiederverbindungsversuch. Kein AP-Fallback.
   while (WiFi.status() != WL_CONNECTED) {
-    unsigned long now = millis();
-    if (now - _connLast >= 120) {
-      showConnectingFrame(); // zeichnet den Spinner und flusht das Display intern
-      // Rote LEDs pulsieren lassen als Verbindungsverlust-Indikator
-      pulseLEDs(now, c_red);
-    }
+    showConnectingFrame(c_red);
     delay(10);
   }
 

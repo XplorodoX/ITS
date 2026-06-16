@@ -35,7 +35,7 @@ void pulseLEDs(unsigned long t, RgbColor base) {
   for (int i = 0; i < 5; i++) setLED(i,c);
 }
 
-void showConnectingFrame() {
+void showConnectingFrame(RgbColor ledColor) {
   // Zeitsteuerung: Überlauf-sicherer Vergleich (vgl. Vorlesung V06 Slide 18)
   // Die Differenzberechnung mit unsigned long verhindert Fehler beim Zähler-Rollover.
   unsigned long now = millis();
@@ -43,7 +43,7 @@ void showConnectingFrame() {
   _connLast = now;
   _connDots = (_connDots + 1) % 4;
 
-  pulseLEDs(now, c_blue);
+  pulseLEDs(now, ledColor);
 
   aalec.display.clear();
   aalec.display.setFont(ArialMT_Plain_10);
@@ -55,6 +55,7 @@ void showConnectingFrame() {
   for (int i = 0; i < _connDots; i++) dotStr += ".";
   aalec.display.drawString(4, 18, dotStr);
   aalec.display.drawString(4, 33, ">" + String(apSSID));
+  displayShow();
 }
 
 void showConnected() {

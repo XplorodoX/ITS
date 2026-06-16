@@ -118,87 +118,42 @@ void setup() {
   Serial.print(apSSID);
   Serial.println("' ...");
   WiFi.persistent(false);      // kein Flash-Write bei jedem Verbindungsversuch
-  WiFi.setAutoReconnect(false);
+  WiFi.setAutoReconnect(true); // Automatisches Reconnect durch den ESP ermöglichen
   WiFi.mode(WIFI_STA);
   WiFi.begin(apSSID, apPass);
 
-  unsigned long startTime = millis();
-  bool connected = false;
-  const unsigned long timeout = 60000;
-
-  while (millis() - startTime < timeout) {
-    if (WiFi.status() == WL_CONNECTED) { connected = true; break; }
-
+  // Endlosschleife zur Verbindungssuche. Kein automatischer AP-Fallback mehr.
+  while (WiFi.status() != WL_CONNECTED) {
     unsigned long now = millis();
     if (now - _connLast >= 120) {
-      unsigned long elapsed = now - startTime;
-      showConnectingFrame();   // zeichnet intern und setzt _connLast
-
-      // Countdown oben rechts ergänzen (Display noch nicht geflusht)
-      aalec.display.setFont(ArialMT_Plain_10);
-      aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
-      aalec.display.drawString(124, 18, String((timeout - elapsed) / 1000) + "s");
-      displayShow();
+      showConnectingFrame(); // zeichnet den Spinner und flusht das Display intern
+      // LEDs rot pulsieren lassen, um fehlende WiFi-Verbindung zu signalisieren
+      pulseLEDs(now, c_red);
     }
-
     delay(10);
   }
 
-  if (connected) {
-    isHosting = false;
-    Serial.print("[WiFi] Verbunden! IP: ");
-    Serial.println(WiFi.localIP());
+  isHosting = false;
+  Serial.print("[WiFi] Verbunden! IP: ");
+  Serial.println(WiFi.localIP());
 
-    // MQTT einrichten
-    connectMqttAsPlayer();
+  // MQTT einrichten
+  connectMqttAsPlayer();
 
-    // Verbunden-Screen mit "CLIENT"-Badge
-    for (int i = 0; i < 5; i++) setLED(i,c_green);
-    aalec.display.clear();
-    aalec.display.setFont(ArialMT_Plain_10);
-    aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
-    aalec.display.drawString(64, 0, "AALeC Quiz");
-    aalec.display.drawLine(0, 13, 128, 13);
-    aalec.display.setFont(ArialMT_Plain_16);
-    aalec.display.drawString(64, 16, "Verbunden!");
-    aalec.display.setFont(ArialMT_Plain_10);
-    aalec.display.drawString(64, 35, WiFi.localIP().toString());
-    // Badge unten links
-    aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
-    aalec.display.drawString(0, 54, "[CLIENT]");
-    displayShow();
-    delay(2500);
-    for (int i = 0; i < 5; i++) setLED(i,c_off);
-
-  } else {
-    Serial.println("[WiFi] Timeout — starte eigenen AP");
-    isHosting = true;
-    WiFi.disconnect();
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(apSSID, apPass);
-    connectMqttAsPlayer();
-    Serial.print("[WiFi] AP gestartet. IP: ");
-    Serial.println(WiFi.softAPIP());
-
-    // Hosting-Screen mit gelbem LED-Flash + Info
-    for (int i = 0; i < 5; i++) setLED(i,c_yellow);
-    aalec.display.clear();
-    aalec.display.setFont(ArialMT_Plain_10);
-    aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
-    aalec.display.drawString(64, 0, "AALeC Quiz");
-    aalec.display.drawLine(0, 13, 128, 13);
-    aalec.display.setFont(ArialMT_Plain_16);
-    aalec.display.drawString(64, 16, "Hosting!");
-    aalec.display.setFont(ArialMT_Plain_10);
-    aalec.display.drawString(64, 34, apSSID);
-    aalec.display.drawString(64, 46, WiFi.softAPIP().toString());
-    // Badge unten links
-    aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
-    aalec.display.drawString(0, 54, "[HOST]");
-    displayShow();
-    delay(2500);
-    for (int i = 0; i < 5; i++) setLED(i,c_off);
-  }
+  // Verbunden-Screen anzeigen
+  for (int i = 0; i < 5; i++) setLED(i, c_green);
+  aalec.display.clear();
+  aalec.display.setFont(ArialMT_Plain_10);
+  aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
+  aalec.display.drawString(64, 0, "AALeC Quiz");
+  aalec.display.drawLine(0, 13, 128, 13);
+  aalec.display.setFont(ArialMT_Plain_16);
+  aalec.display.drawString(64, 16, "Verbunden!");
+  aalec.display.setFont(ArialMT_Plain_10);
+  aalec.display.drawString(64, 35, WiFi.localIP().toString());
+  displayShow();
+  delay(2500);
+  for (int i = 0; i < 5; i++) setLED(i, c_off);
 }
 
 // ===== LOOP =====

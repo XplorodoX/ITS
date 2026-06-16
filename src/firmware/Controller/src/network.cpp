@@ -273,73 +273,39 @@ bool handleConnectionLoss() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(apSSID, apPass);
 
-  unsigned long startTime = millis();
-  const unsigned long timeout = 60000;
-
-  while (millis() - startTime < timeout) {
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.print("[WiFi] Reconnect erfolgreich! IP: ");
-      Serial.println(WiFi.localIP());
-
-      connectMqttAsPlayer();
-
-      for (int i = 0; i < 5; i++) setLED(i,c_green);
-      aalec.display.clear();
-      aalec.display.setFont(ArialMT_Plain_10);
-      aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
-      aalec.display.drawString(64, 0, "AALeC Quiz");
-      aalec.display.drawLine(0, 13, 128, 13);
-      aalec.display.setFont(ArialMT_Plain_16);
-      aalec.display.drawString(64, 18, "Verbunden!");
-      aalec.display.setFont(ArialMT_Plain_10);
-      aalec.display.drawString(64, 38, WiFi.localIP().toString());
-      displayShow();
-      delay(1500);
-      for (int i = 0; i < 5; i++) setLED(i,c_off);
-
-      isHosting    = false;
-      quizState    = STATE_WAITING;
-      return true;
-    }
-
+  // Unbegrenzter Wiederverbindungsversuch. Kein AP-Fallback.
+  while (WiFi.status() != WL_CONNECTED) {
     unsigned long now = millis();
     if (now - _connLast >= 120) {
-      unsigned long elapsed = now - startTime;
-      showConnectingFrame();
-      aalec.display.setFont(ArialMT_Plain_10);
-      aalec.display.setTextAlignment(TEXT_ALIGN_RIGHT);
-      aalec.display.drawString(124, 18, String((timeout - elapsed) / 1000) + "s");
-      displayShow();
+      showConnectingFrame(); // zeichnet den Spinner und flusht das Display intern
+      // Rote LEDs pulsieren lassen als Verbindungsverlust-Indikator
+      pulseLEDs(now, c_red);
     }
     delay(10);
   }
 
-  Serial.println("[WiFi] Reconnect Timeout — starte AP");
-  WiFi.disconnect();
-  WiFi.mode(WIFI_AP);
-  WiFi.softAP(apSSID, apPass);
-  isHosting = true;
-  quizState = STATE_WAITING;
+  Serial.print("[WiFi] Reconnect erfolgreich! IP: ");
+  Serial.println(WiFi.localIP());
+
   connectMqttAsPlayer();
 
-  for (int i = 0; i < 5; i++) setLED(i,c_yellow);
+  for (int i = 0; i < 5; i++) setLED(i,c_green);
   aalec.display.clear();
   aalec.display.setFont(ArialMT_Plain_10);
   aalec.display.setTextAlignment(TEXT_ALIGN_CENTER);
   aalec.display.drawString(64, 0, "AALeC Quiz");
   aalec.display.drawLine(0, 13, 128, 13);
   aalec.display.setFont(ArialMT_Plain_16);
-  aalec.display.drawString(64, 16, "Hosting!");
+  aalec.display.drawString(64, 18, "Verbunden!");
   aalec.display.setFont(ArialMT_Plain_10);
-  aalec.display.drawString(64, 34, apSSID);
-  aalec.display.drawString(64, 46, WiFi.softAPIP().toString());
-  aalec.display.setTextAlignment(TEXT_ALIGN_LEFT);
-  aalec.display.drawString(0, 54, "[HOST]");
+  aalec.display.drawString(64, 38, WiFi.localIP().toString());
   displayShow();
-  delay(2000);
+  delay(1500);
   for (int i = 0; i < 5; i++) setLED(i,c_off);
 
-  return false;
+  isHosting    = false;
+  quizState    = STATE_WAITING;
+  return true;
 }
 
 void checkConnection() {

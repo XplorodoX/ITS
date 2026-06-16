@@ -2,7 +2,7 @@
 #include <AALeC-V3.h>
 
 
-void ICACHE_RAM_ATTR AALeC_V3_ISR_DREH() {
+void IRAM_ATTR AALeC_V3_ISR_DREH() {
 	static int16_t val, z, n;
 	const static int8_t delta[4][4] = {
 		{0, 1, 2, 0},

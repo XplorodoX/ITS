@@ -36,6 +36,8 @@ void pulseLEDs(unsigned long t, RgbColor base) {
 }
 
 void showConnectingFrame() {
+  // Zeitsteuerung: Überlauf-sicherer Vergleich (vgl. Vorlesung V06 Slide 18)
+  // Die Differenzberechnung mit unsigned long verhindert Fehler beim Zähler-Rollover.
   unsigned long now = millis();
   if (now - _connLast < 120) return;
   _connLast = now;

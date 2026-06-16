@@ -36,30 +36,27 @@ Du musst die Anwendung und die Firmware nicht selbst kompilieren. Du kannst dire
 
 ### 1. Pre-compiled Controller-Firmware flashen
 1. Lade die fertig kompilierte `firmware.bin` aus dem neuesten **GitHub Release** dieses Repositories herunter.
-2. Lege die Datei im Ordner `src/firmware/Controller/.pio/build/esp12e/` ab (erstelle die Ordner, falls sie noch nicht existieren).
+2. Lege die Datei einfach direkt in den Ordner `src/firmware/Controller/` ab.
 3. Verbinde den AALeC-Controller per USB mit deinem Mac.
-4. Führe das Upload-Skript aus (benötigt kein PlatformIO, nur Python):
+4. Führe das Upload-Skript aus:
    ```bash
    ./src/firmware/Controller/upload.sh
    ```
 
 ### 2. Pre-built Docker/Podman Container starten
-Du kannst die fertigen Images aus der GitHub Container Registry (GHCR) beziehen, anstatt sie lokal zu bauen.
-Ersetze in der `docker-compose.yml` einfach die `build:`-Blöcke durch die Images:
-
-* **Game Master (`game-master`)**:
-  ```yaml
-  image: ghcr.io/xplorodox/its-backend:latest
-  ```
-* **Frontend (`frontend`)**:
-  ```yaml
-  image: ghcr.io/xplorodox/its-frontend:latest
-  ```
-
-Danach kannst du alle Services ohne lokalen Build-Prozess starten:
+Die `docker-compose.yml` im Hauptverzeichnis ist standardmäßig so konfiguriert, dass sie die fertigen Images direkt aus der GitHub Container Registry (GHCR) herunterlädt. Starte alle Services einfach mit:
 ```bash
 podman-compose up -d  # oder docker-compose up -d
 ```
+
+### 🛠️ Lokale Entwicklung (Kompilieren aus dem Source-Code)
+Falls du Änderungen am Code vornimmst und diese lokal bauen und ausführen möchtest:
+1. **Container lokal bauen & starten**:
+   ```bash
+   podman-compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+   # bzw. docker-compose
+   ```
+2. **Firmware lokal kompilieren**: Folge den regulären Schritten unter [Setup & Ausführung](#🚀-setup--ausführung).
 
 ---
 

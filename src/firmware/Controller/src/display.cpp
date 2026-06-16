@@ -94,6 +94,7 @@ void showNameSelect() {
   }
 
   aalec.reset_rotate(0);
+  aalec.button_changed(); // Sync/consume button state to avoid registering initial press as a character select click
 
   while (true) {
     if (aalec.rotate_changed()) {
@@ -169,6 +170,7 @@ void showWaiting() {
   unsigned long lastUpdate = 0;
   unsigned long nameResetHoldStart = 0;
   bool waitForButtonReleaseAfterReset = false;
+  unsigned long lastPressedMs = 0;
 
   while (quizState == STATE_WAITING) {
     checkConnection();
@@ -206,8 +208,11 @@ void showWaiting() {
           nameResetRequested = false;
           continue;
         }
+        lastPressedMs = now;
       } else {
-        nameResetHoldStart = 0;
+        if (millis() - lastPressedMs > 150) {
+          nameResetHoldStart = 0;
+        }
       }
     }
 

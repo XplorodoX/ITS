@@ -30,9 +30,42 @@ Das System teilt sich in drei Hauptkomponenten auf:
 
 ---
 
+## 📦 Schnellstart mit Pre-built Releases (Ohne Kompilieren)
+
+Du musst die Anwendung und die Firmware nicht selbst kompilieren. Du kannst direkt die vorgefertigten Container-Images und die kompilierte Firmware aus den GitHub Releases nutzen:
+
+### 1. Pre-compiled Controller-Firmware flashen
+1. Lade die fertig kompilierte `firmware.bin` aus dem neuesten **GitHub Release** dieses Repositories herunter.
+2. Lege die Datei im Ordner `src/firmware/Controller/.pio/build/esp12e/` ab (erstelle die Ordner, falls sie noch nicht existieren).
+3. Verbinde den AALeC-Controller per USB mit deinem Mac.
+4. Führe das Upload-Skript aus (benötigt kein PlatformIO, nur Python):
+   ```bash
+   ./src/firmware/Controller/upload.sh
+   ```
+
+### 2. Pre-built Docker/Podman Container starten
+Du kannst die fertigen Images aus der GitHub Container Registry (GHCR) beziehen, anstatt sie lokal zu bauen.
+Ersetze in der `docker-compose.yml` einfach die `build:`-Blöcke durch die Images:
+
+* **Game Master (`game-master`)**:
+  ```yaml
+  image: ghcr.io/xplorodox/its-backend:latest
+  ```
+* **Frontend (`frontend`)**:
+  ```yaml
+  image: ghcr.io/xplorodox/its-frontend:latest
+  ```
+
+Danach kannst du alle Services ohne lokalen Build-Prozess starten:
+```bash
+podman-compose up -d  # oder docker-compose up -d
+```
+
+---
+
 ## 🚀 Setup & Ausführung
 
-Folge diesen Schritten, um das Quiz-System lokal aufzusetzen und zu starten:
+Folge diesen Schritten, um das Quiz-System von Grund auf lokal aufzusetzen und zu starten:
 
 ### Schritt 1: Netzwerk & mDNS konfigurieren (Wichtig!)
 Damit du den Code auf den AALeC-Geräten nicht bei jedem Wechsel der IP-Adresse neu flashen musst, wird **mDNS** zur Broker-Suche genutzt.

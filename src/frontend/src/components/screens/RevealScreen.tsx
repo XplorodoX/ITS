@@ -3,18 +3,29 @@
 import type { Question, Reveal } from "@/types/quiz";
 import styles from "./screens.module.css";
 
+// Antwort-Buchstaben und Farbcodes für MCQ-Diagramme
 const LABELS = ["A", "B", "C", "D"] as const;
 const COLORS = ["#6c63ff", "#22c55e", "#eab308", "#ef4444"];
 
 interface Props {
+  /** Die aktuell behandelte Frage */
   question: Question;
+  /** Die Auflösungsdaten vom Game Master (z. B. richtige Option, abgegebene Schätzwerte) */
   reveal: Reveal;
 }
 
+/**
+ * RevealScreen Komponente.
+ *
+ * Präsentiert die Auflösung einer Frage. Zeichnet ein Diagramm für Multiple Choice /
+ * Höher-Niedriger Fragen oder zeigt eine Rangliste mit Abweichungen (Deltas) für
+ * Schätz- und Sensor-Challenges an.
+ */
 export default function RevealScreen({ question, reveal }: Props) {
 
-  // ── Estimate ──────────────────────────────────────────────────────────────
+  // ── 1. Schätzfragen Auflösung (Estimate) ──
   if (reveal.type === "estimate") {
+    // Ermittelt die maximale Abweichung, um die relative Balkenbreite (0-100%) zu skalieren
     const maxDelta = Math.max(...reveal.answers.map(a => a.delta), 1);
     return (
       <div className={styles.screen}>
@@ -23,6 +34,7 @@ export default function RevealScreen({ question, reveal }: Props) {
           Richtige Antwort: <strong>{reveal.correct}{reveal.unit ? ` ${reveal.unit}` : ""}</strong>
         </div>
         <div className={styles.estimateList}>
+          {/* Zeigt die Top 8 Schätzungen, sortiert nach geringster Abweichung */}
           {reveal.answers.slice(0, 8).map((a, i) => (
             <div
               key={a.device_id}
@@ -46,7 +58,7 @@ export default function RevealScreen({ question, reveal }: Props) {
     );
   }
 
-  // ── Poti Target ───────────────────────────────────────────────────────────
+  // ── 2. Poti-Challenge Auflösung (Poti Target) ──
   if (reveal.type === "poti_target") {
     const maxDelta = Math.max(...reveal.answers.map(a => a.delta), 1);
     return (
@@ -54,7 +66,7 @@ export default function RevealScreen({ question, reveal }: Props) {
         <h1 className={styles.questionText}>{question.text}</h1>
         <div className={styles.estimateCorrect}>
           Zielwert: <strong>{reveal.correct}%</strong>
-          <span style={{ marginLeft: "1rem", fontSize: "0.9rem", opacity: 0.7 }}>±{reveal.tolerance}%</span>
+          <span style={{ marginLeft: "1rem", fontSize: "0.9rem", opacity: 0.7 }}>±{reveal.tolerance}% Toleranz</span>
         </div>
         <div className={styles.estimateList}>
           {reveal.answers.slice(0, 8).map((a, i) => (
@@ -80,7 +92,7 @@ export default function RevealScreen({ question, reveal }: Props) {
     );
   }
 
-  // ── Temp Target ───────────────────────────────────────────────────────────
+  // ── 3. Temperatur-Challenge Auflösung (Temp Target) ──
   if (reveal.type === "temp_target") {
     const maxDelta = Math.max(...reveal.answers.map(a => a.delta), 1);
     return (
@@ -88,7 +100,7 @@ export default function RevealScreen({ question, reveal }: Props) {
         <h1 className={styles.questionText}>{question.text}</h1>
         <div className={styles.estimateCorrect}>
           Zieltemperatur: <strong>{reveal.correct} °C</strong>
-          <span style={{ marginLeft: "1rem", fontSize: "0.9rem", opacity: 0.7 }}>±{reveal.tolerance} °C</span>
+          <span style={{ marginLeft: "1rem", fontSize: "0.9rem", opacity: 0.7 }}>±{reveal.tolerance} °C Toleranz</span>
         </div>
         <div className={styles.estimateList}>
           {reveal.answers.slice(0, 8).map((a, i) => (
@@ -114,7 +126,7 @@ export default function RevealScreen({ question, reveal }: Props) {
     );
   }
 
-  // ── Higher / Lower ────────────────────────────────────────────────────────
+  // ── 4. Höher / Niedriger Auflösung (Higher / Lower) ──
   if (reveal.type === "higher_lower") {
     const total   = (reveal.counts.HIGHER + reveal.counts.LOWER) || 1;
     const unit    = reveal.unit ? ` ${reveal.unit}` : "";
@@ -159,7 +171,7 @@ export default function RevealScreen({ question, reveal }: Props) {
     );
   }
 
-  // ── MCQ (default) ─────────────────────────────────────────────────────────
+  // ── 5. Standard MCQ Auflösung (Multiple Choice) ──
   const total = Object.values(reveal.counts).reduce((a, b) => a + b, 0) || 1;
   return (
     <div className={styles.screen}>

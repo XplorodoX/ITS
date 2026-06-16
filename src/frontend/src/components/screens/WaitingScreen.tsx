@@ -1,21 +1,31 @@
 "use client";
 
-import type { LobbyPlayer, QuestionSets } from "@/types/quiz";
+import type { LobbyPlayer } from "@/types/quiz";
 import styles from "./screens.module.css";
 import lobbyStyles from "./LobbyScreen.module.css";
 
 interface Props {
+  /** Liste aller registrierten Spieler */
   players: LobbyPlayer[];
+  /** Mindestanzahl Spieler, um das Quiz zu starten */
   minPlayers: number;
+  /** Der aktuelle Zustand des Spiels (muss WAITING sein) */
   gameState: string;
-  questionSets: QuestionSets | null;
+  /** Callback zum Starten des Spiels (Übergang zu QUESTION) */
   onStart: () => void;
-  onLoadSet: (name: string) => void;
 }
 
-export default function WaitingScreen({ players, minPlayers, gameState, questionSets, onStart, onLoadSet }: Props) {
+/**
+ * WaitingScreen Komponente (Lobby).
+ *
+ * Wartet auf die Verbindung der Controller. Zeigt die verbundenen Spieler
+ * als Chips mit Online-Statuspunkten an. Ermöglicht dem Spielleiter, das Quiz zu starten.
+ */
+export default function WaitingScreen({ players, minPlayers, gameState, onStart }: Props) {
+  // Filtern nach Spielern, die gerade aktiv online sind
   const activePlayers = players.filter((p) => p.online);
   const onlineCount   = activePlayers.length;
+  // Berechnen, wie viele Spieler noch fehlen, um das konfigurierte Minimum zu erreichen
   const missing       = Math.max(0, minPlayers - onlineCount);
   const canStart      = gameState === "WAITING" && missing === 0;
 
@@ -46,33 +56,6 @@ export default function WaitingScreen({ players, minPlayers, gameState, question
         )}
       </div>
 
-      {/* ── Fragen-Set ── */}
-      {gameState === "WAITING" && questionSets && (
-        <div className={lobbyStyles.setSelector}>
-          <p className={lobbyStyles.setLabel}>
-            Fragen-Set:
-            <strong style={{ marginLeft: "0.5rem", color: "var(--accent)" }}>
-              {questionSets.active}
-            </strong>
-          </p>
-          {questionSets.sets.length > 1 && (
-            <div className={lobbyStyles.setChips}>
-              {questionSets.sets.map(s => (
-                <button
-                  key={s.name}
-                  className={`${lobbyStyles.setChip} ${s.active ? lobbyStyles.setChipActive : ""}`}
-                  onClick={() => !s.active && onLoadSet(s.name)}
-                  disabled={s.active}
-                >
-                  {s.name}
-                  <span className={lobbyStyles.setChipCount}>{s.count}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* ── Start-Aktionen ── */}
       {gameState === "WAITING" && (
         <div className={lobbyStyles.actions}>
@@ -86,6 +69,7 @@ export default function WaitingScreen({ players, minPlayers, gameState, question
               <strong>{onlineCount}</strong> Spieler bereit — los geht&apos;s!
             </p>
           )}
+          {/* Start-Button ist deaktiviert, solange nicht genügend Spieler online sind */}
           <button
             className={lobbyStyles.startBtn}
             disabled={!canStart}

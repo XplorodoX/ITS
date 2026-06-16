@@ -107,6 +107,13 @@ void setup() {
   for (int i = 0; i < 5; i++) setLED(i,c_off);
   aalec.reset_rotate(0);
 
+  // Wenn kein Name im EEPROM vorhanden ist (z. B. beim ersten Start),
+  // fordern wir den Spieler direkt zur Namenseingabe auf, noch vor dem WLAN-Verbindungsaufbau.
+  if (strlen(playerName) == 0) {
+    Serial.println("[BOOT] Kein Name im EEPROM vorhanden — fordere Eingabe an");
+    showNameSelect();
+  }
+
   Serial.print("[WiFi] Verbinde mit '");
   Serial.print(apSSID);
   Serial.println("' ...");

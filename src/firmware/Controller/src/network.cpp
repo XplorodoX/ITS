@@ -241,6 +241,10 @@ bool mqttReconnect() {
 }
 
 void publishConnect() {
+  if (!mqtt.connected()) {
+    Serial.println("[MQTT] publishConnect übersprungen: nicht mit Broker verbunden");
+    return;
+  }
   const char* name = (strlen(playerName) > 0) ? playerName : deviceId.c_str();
   JsonDocument reg;
   reg["device_id"] = deviceId;

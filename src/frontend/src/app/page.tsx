@@ -27,14 +27,6 @@ export default function BeamerPage() {
     publish("quiz/control", { action: "restart" });
   }, [publish]);
 
-  const handleSendNameList = useCallback((names: string[]) => {
-    publish("quiz/namelist/set", { names });
-  }, [publish]);
-
-  const handleResetNames = useCallback(() => {
-    publish("quiz/control", { action: "reset_names" });
-  }, [publish]);
-
   const handleLoadSet = useCallback((name: string) => {
     publish("quiz/control", { action: "load_set", name });
   }, [publish]);
@@ -46,8 +38,6 @@ export default function BeamerPage() {
       gameState={currentState}
       questionSets={questionSets}
       onStart={handleStart}
-      onSendNameList={handleSendNameList}
-      onResetNames={handleResetNames}
       onLoadSet={handleLoadSet}
     />
   );

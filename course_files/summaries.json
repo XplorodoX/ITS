@@ -1,0 +1,1690 @@
+[
+  {
+    "filename": "Arduino_Setup.pdf",
+    "num_pages": 15,
+    "title": "",
+    "sample": "--- Page 1 ---\nESP8266 und ESP32 einrichten\nArduino IDE und PlatformIO mit Hello-World-Projekt\nHoppe Linus\nAalen University\n23. März 2026\n\n--- Page 2 ---\nZiel der Einheit\n• ESP8266 und ESP32 in derArduino IDE einrichten\n• Ein erstes Hello-World-Projekt mit serieller Ausgabe und LED-Blinken laden\n• Dieselbe Aufgabe inPlatformIO unter VS Code anlegen\n• Die Unterschiede der beiden Entwicklungsumgebungen verstehen\nBenötigt\nUSB-Kabel, ESP8266- oder ESP32-Board, installierte Treiber, Arduino IDE bzw. VS\nCode\n23. März 2026 Hoppe Linus 2\n--- Page 3 ---\nAgenda\n1 Arduino IDE\n2 Hello World in der Arduino IDE\n3 PlatformIO in VS Code\n4 Fazit\n23. März 2026 Hoppe Linus 3\n--- Page 4 ---\nArduino IDE: Grundprinzip\n• In der Arduino IDE müssen für ESP-Boards zusätzliche Board-Pakete installiert\nwerden.\n• Dafür werden in den EinstellungenBoard-Manager-URLs eingetragen.\n• Danach werden die Boards über denBoardverwalter installiert.\n• Anschließend wählt manBoard und Port aus und lädt den Sketch hoch.\nWichtige URLs\n• ESP8266:\nhttps://arduino.esp8266.com/stable/package_esp8266com_index.json\n• ESP32:\nhttps://espressif.github.io/arduino-esp32/package_esp32_index.json\n23. März 2026 Hoppe Linus 4\n--- Page 5 ---\nESP8266 in der Arduino IDE einrichten\n1 Arduino IDE öffnen\n2 Datei → Einstellungen\n3 ESP8266-URL in „Zusätzliche\nBoardverwalter-URLs“ eintragen\n4 Mit OK bestätigen\nDanach: Werkzeuge → Board →\nBoardverwalter\n23. März 2026 Hoppe Linus 5\n--- Page 13 ---\nplatformio.ini für ESP32 und ESP8266\nESP32-Beispiel\n[env:esp32dev]\nplatform = espressif32\nboard = esp32dev\nframework = arduino\nmonitor_speed = 115200\nESP8266-Beispiel\n[env:nodemcuv2]\nplatform = espressif8266\nboard = nodemcuv2\nframework = arduino\nmonitor_speed = 115200\nMerke\nDer eigentliche Programmcode liegt insrc/main.cpp. In PlatformIO muss ein\nArduino-Projekt mit #include <Arduino.h> beginnen.\n23. März 2026 Hoppe Linus 13\n--- Page 14 ---\nFazit\n• Die Arduino IDE ist für den schnellen Einstieg einfacher.\n• PlatformIO ist für größere Projekte strukturierter und reproduzierbarer.\n• Das Hello-World-Projekt ist in beiden Umgebungen fast identisch.\n• Die wichtigsten Fehlerquellen sind:\n• falsches Board\n• falscher Port\n• fehlender USB-Treiber\n• falsche Baudrate im Serial Monitor\n23. März 2026 Hoppe Linus 14\n--- Page 15 ---\nQuellen I\n• Arduino ESP32 Documentation:\nhttps://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html\n• ESP8266 Arduino Core Documentation:\nhttps://arduino-esp8266.readthedocs.io/en/latest/installing.html\n• PlatformIO IDE for VS Code:https://docs.platformio.org/page/ide/vscode.html\n• PlatformIO Board: NodeMCU 1.0 (ESP-12E Module):\nhttps://docs.platformio.org/en/latest/boards/espressif8266/nodemcuv2.html\n• PlatformIO Board: Espressif ESP32 Dev Module:\nhttps://docs.platformio.org/en/latest/boards/espressif32/esp32dev.html\n• Interner Foliensatz „ESP8266- und Arduino-Programmierung“ aus dem Modul TIBS\n23. März 2026 Hoppe Linus 15",
+    "headings": [
+      [
+        1,
+        "ESP8266 und ESP32 einrichten"
+      ],
+      [
+        2,
+        "Ziel der Einheit"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Arduino IDE: Grundprinzip"
+      ],
+      [
+        5,
+        "ESP8266 in der Arduino IDE einrichten"
+      ],
+      [
+        6,
+        "ESP8266 im Boardverwalter installieren"
+      ],
+      [
+        7,
+        "ESP32 in der Arduino IDE einrichten"
+      ],
+      [
+        8,
+        "ESP32 im Boardverwalter installieren"
+      ],
+      [
+        9,
+        "Hello World: Arduino IDE"
+      ],
+      [
+        10,
+        "PlatformIO installieren"
+      ],
+      [
+        11,
+        "Neues PlatformIO-Projekt anlegen"
+      ],
+      [
+        12,
+        "Hello World: PlatformIO"
+      ],
+      [
+        13,
+        "platformio.ini für ESP32 und ESP8266"
+      ],
+      [
+        14,
+        "Fazit"
+      ],
+      [
+        15,
+        "Quellen I"
+      ]
+    ]
+  },
+  {
+    "filename": "Arduino_Setup_01.pdf",
+    "num_pages": 15,
+    "title": "",
+    "sample": "--- Page 1 ---\nESP8266 und ESP32 einrichten\nArduino IDE und PlatformIO mit Hello-World-Projekt\nHoppe Linus\nAalen University\n23. März 2026\n\n--- Page 2 ---\nZiel der Einheit\n• ESP8266 und ESP32 in derArduino IDE einrichten\n• Ein erstes Hello-World-Projekt mit serieller Ausgabe und LED-Blinken laden\n• Dieselbe Aufgabe inPlatformIO unter VS Code anlegen\n• Die Unterschiede der beiden Entwicklungsumgebungen verstehen\nBenötigt\nUSB-Kabel, ESP8266- oder ESP32-Board, installierte Treiber, Arduino IDE bzw. VS\nCode\n23. März 2026 Hoppe Linus 2\n--- Page 3 ---\nAgenda\n1 Arduino IDE\n2 Hello World in der Arduino IDE\n3 PlatformIO in VS Code\n4 Fazit\n23. März 2026 Hoppe Linus 3\n--- Page 4 ---\nArduino IDE: Grundprinzip\n• In der Arduino IDE müssen für ESP-Boards zusätzliche Board-Pakete installiert\nwerden.\n• Dafür werden in den EinstellungenBoard-Manager-URLs eingetragen.\n• Danach werden die Boards über denBoardverwalter installiert.\n• Anschließend wählt manBoard und Port aus und lädt den Sketch hoch.\nWichtige URLs\n• ESP8266:\nhttps://arduino.esp8266.com/stable/package_esp8266com_index.json\n• ESP32:\nhttps://espressif.github.io/arduino-esp32/package_esp32_index.json\n23. März 2026 Hoppe Linus 4\n--- Page 5 ---\nESP8266 in der Arduino IDE einrichten\n1 Arduino IDE öffnen\n2 Datei → Einstellungen\n3 ESP8266-URL in „Zusätzliche\nBoardverwalter-URLs“ eintragen\n4 Mit OK bestätigen\nDanach: Werkzeuge → Board →\nBoardverwalter\n23. März 2026 Hoppe Linus 5\n--- Page 13 ---\nplatformio.ini für ESP32 und ESP8266\nESP32-Beispiel\n[env:esp32dev]\nplatform = espressif32\nboard = esp32dev\nframework = arduino\nmonitor_speed = 115200\nESP8266-Beispiel\n[env:nodemcuv2]\nplatform = espressif8266\nboard = nodemcuv2\nframework = arduino\nmonitor_speed = 115200\nMerke\nDer eigentliche Programmcode liegt insrc/main.cpp. In PlatformIO muss ein\nArduino-Projekt mit #include <Arduino.h> beginnen.\n23. März 2026 Hoppe Linus 13\n--- Page 14 ---\nFazit\n• Die Arduino IDE ist für den schnellen Einstieg einfacher.\n• PlatformIO ist für größere Projekte strukturierter und reproduzierbarer.\n• Das Hello-World-Projekt ist in beiden Umgebungen fast identisch.\n• Die wichtigsten Fehlerquellen sind:\n• falsches Board\n• falscher Port\n• fehlender USB-Treiber\n• falsche Baudrate im Serial Monitor\n23. März 2026 Hoppe Linus 14\n--- Page 15 ---\nQuellen I\n• Arduino ESP32 Documentation:\nhttps://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html\n• ESP8266 Arduino Core Documentation:\nhttps://arduino-esp8266.readthedocs.io/en/latest/installing.html\n• PlatformIO IDE for VS Code:https://docs.platformio.org/page/ide/vscode.html\n• PlatformIO Board: NodeMCU 1.0 (ESP-12E Module):\nhttps://docs.platformio.org/en/latest/boards/espressif8266/nodemcuv2.html\n• PlatformIO Board: Espressif ESP32 Dev Module:\nhttps://docs.platformio.org/en/latest/boards/espressif32/esp32dev.html\n• Interner Foliensatz „ESP8266- und Arduino-Programmierung“ aus dem Modul TIBS\n23. März 2026 Hoppe Linus 15",
+    "headings": [
+      [
+        1,
+        "ESP8266 und ESP32 einrichten"
+      ],
+      [
+        2,
+        "Ziel der Einheit"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Arduino IDE: Grundprinzip"
+      ],
+      [
+        5,
+        "ESP8266 in der Arduino IDE einrichten"
+      ],
+      [
+        6,
+        "ESP8266 im Boardverwalter installieren"
+      ],
+      [
+        7,
+        "ESP32 in der Arduino IDE einrichten"
+      ],
+      [
+        8,
+        "ESP32 im Boardverwalter installieren"
+      ],
+      [
+        9,
+        "Hello World: Arduino IDE"
+      ],
+      [
+        10,
+        "PlatformIO installieren"
+      ],
+      [
+        11,
+        "Neues PlatformIO-Projekt anlegen"
+      ],
+      [
+        12,
+        "Hello World: PlatformIO"
+      ],
+      [
+        13,
+        "platformio.ini für ESP32 und ESP8266"
+      ],
+      [
+        14,
+        "Fazit"
+      ],
+      [
+        15,
+        "Quellen I"
+      ]
+    ]
+  },
+  {
+    "filename": "Arduino_Setup_02.pdf",
+    "num_pages": 18,
+    "title": "",
+    "sample": "--- Page 1 ---\nESP8266 und ESP32 einrichten\nArduino IDE und PlatformIO mit Hello-World-Projekt\nHoppe Linus\nAalen University\n24. März 2026\n\n--- Page 2 ---\nZiel\n• ESP8266 und ESP32 in derArduino IDE einrichten\n• Ein erstes Hello-World-Projekt mit serieller Ausgabe und LED-Blinken laden\n• Dieselbe Aufgabe inPlatformIO unter VS Code anlegen\nBenötigt\nUSB-Kabel, ESP8266- oder ESP32-Board, installierte Treiber, Arduino IDE bzw. VS\nCode\n24. März 2026 Hoppe Linus 2\n--- Page 3 ---\nAgenda\n1 Arduino IDE\n2 Hello World in der Arduino IDE\n3 PlatformIO in VS Code\n4 Fazit\n5 AALeC mit PlatformIO\n24. März 2026 Hoppe Linus 3\n--- Page 4 ---\nArduino IDE: Grundprinzip\n• In der Arduino IDE müssen für ESP-Boards zusätzliche Board-Pakete installiert\nwerden.\n• Dafür werden in den EinstellungenBoard-Manager-URLs eingetragen.\n• Danach werden die Boards über denBoardverwalter installiert.\n• Anschließend wählt manBoard und Port aus und lädt den Sketch hoch.\nWichtige URLs\n• ESP8266:\nhttps://arduino.esp8266.com/stable/package_esp8266com_index.json\n• ESP32:\nhttps://espressif.github.io/arduino-esp32/package_esp32_index.json\n24. März 2026 Hoppe Linus 4\n--- Page 5 ---\nESP8266 in der Arduino IDE einrichten\n1 Arduino IDE öffnen\n2 Datei → Einstellungen\n3 ESP8266-URL in „Zusätzliche\nBoardverwalter-URLs“ eintragen\n4 Mit OK bestätigen\nDanach: Werkzeuge → Board →\nBoardverwalter\n24. März 2026 Hoppe Linus 5\n--- Page 16 ---\nPlatformIO: Abhängigkeiten (lib_deps)\n[env:d1]\nplatform = espressif8266\nboard = d1\nframework = arduino\nlib_deps =\nadafruit/Adafruit NeoPixel\nadafruit/Adafruit GFX Library\nthingpulse/ESP8266 and ESP32 OLED driver\nfor SSD1306 displays\nmadhephaestus/WiiChuck\nadafruit/Adafruit Unified Sensor\nadafruit/Adafruit BME280 Library\nadafruit/Adafruit BMP280 Library\nadafruit/Adafruit BME680 Library\nHinweis\nDiese Bibliotheken werden beim ersten Build automatisch installiert.\n24. März 2026 Hoppe Linus 16\n--- Page 17 ---\nAALeC: Projektstruktur\n• PlatformIO-Projekt enthält folgende Struktur:\n• src/ → eigener Code\n• lib/ → externe Bibliotheken\nWichtig\nDer AALeC-Ordner muss in:lib/AALeC-V3/ liegen\n• Danach kann #include <AALeC-V3.h> verwendet werden\n24. März 2026 Hoppe Linus 17\n--- Page 18 ---\nQuellen I\n• Arduino ESP32 Documentation:\nhttps://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html\n• ESP8266 Arduino Core Documentation:\nhttps://arduino-esp8266.readthedocs.io/en/latest/installing.html\n• PlatformIO IDE for VS Code:https://docs.platformio.org/page/ide/vscode.html\n• PlatformIO Board: NodeMCU 1.0 (ESP-12E Module):\nhttps://docs.platformio.org/en/latest/boards/espressif8266/nodemcuv2.html\n• PlatformIO Board: Espressif ESP32 Dev Module:\nhttps://docs.platformio.org/en/latest/boards/espressif32/esp32dev.html\n• Interner Foliensatz „ESP8266- und Arduino-Programmierung“ aus dem Modul TIBS\n24. März 2026 Hoppe Linus 18",
+    "headings": [
+      [
+        1,
+        "ESP8266 und ESP32 einrichten"
+      ],
+      [
+        2,
+        "Ziel"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Arduino IDE: Grundprinzip"
+      ],
+      [
+        5,
+        "ESP8266 in der Arduino IDE einrichten"
+      ],
+      [
+        6,
+        "ESP8266 im Boardverwalter installieren"
+      ],
+      [
+        7,
+        "ESP32 in der Arduino IDE einrichten"
+      ],
+      [
+        8,
+        "ESP32 im Boardverwalter installieren"
+      ],
+      [
+        9,
+        "Hello World: Arduino IDE"
+      ],
+      [
+        10,
+        "PlatformIO installieren"
+      ],
+      [
+        11,
+        "Neues PlatformIO-Projekt anlegen"
+      ],
+      [
+        12,
+        "Hello World: PlatformIO"
+      ],
+      [
+        13,
+        "platformio.ini für ESP32 und ESP8266"
+      ],
+      [
+        14,
+        "Fazit"
+      ],
+      [
+        15,
+        "AALeC: Bibliotheken und Setup"
+      ],
+      [
+        16,
+        "PlatformIO: Abhängigkeiten (lib_deps)"
+      ],
+      [
+        17,
+        "AALeC: Projektstruktur"
+      ],
+      [
+        18,
+        "Quellen I"
+      ]
+    ]
+  },
+  {
+    "filename": "Datasheet_AT24C256.pdf",
+    "num_pages": 23,
+    "title": "AT24C128/256",
+    "sample": "--- Page 1 ---\n1\nFeatures\n• Low-voltage and Standard-voltage Operation \n– 2.7 (V CC = 2.7V to 5.5V) \n– 1.8 (V CC = 1.8V to 3.6V) \n Internally Organized 16,384 x 8 and 32,768 x 8 \n Two-wire Serial Interface \n Schmitt Trigger, Filtered Inputs for Noise Suppression \n Bidirectional Data Transfer Protocol \n 1 MHz (5V), 400 kHz (2.7V, 2.5V) and 100 kHz (1.8V) Compatibility \n Write Protect Pin for Hardware and Software Data Protection \n 64-byte Page Write Mode (Partial Page Writes Allowed) \n Self-timed Write Cycle (5 ms Max) \n High Reliability \n– Endurance: One Million Write Cycles \n– Data Retention: 40 Years \n Extended Temperature and Lead-free/Halogen-free\nDevices Available \n 8-lead JEDEC PDIP, 8-lead JEDEC and EIAJ SOIC, 8-lead MAP, 8-lead TSSOP, 8-lead \nSAP and 8-ball dBGA2 Packages\n Die Sales: \n--- Page 2 ---\n2 AT24C128/256\n0670T–SEEPR–3/07\nFigure 1.  Block Diagram \nAbsolute Maximum Ratings*\nOperating Temperature.................................–55° C to +125° C *NOTICE: Stresses beyond those listed under “Absolute \nMaximum Ratings” may cause permanent dam-\nage to the device. This is a stress rating only and \nfunctional operation of the device at these or any \nother conditions beyond those indicated in the \noperational sections of this specification is not \nimplied. Exposure to absolute maximum rating \nconditions for extended periods may affect device \nreliability.\nStorage Temperature ....................................–65° C to +150° C\nVoltage on Any Pin\nwith Respect to Ground ....................................–1.0V to +7.0V\nMaximum Operating Voltage ........................................\n--- Page 3 ---\n3\nAT24C128/256\n0670T–SEEPR–3/07\nPin Description SERIAL CLOCK (SCL): The SCL input is used to positive edge clock data into each\nEEPROM device and negative edge clock data out of each device.\nSERIAL DATA (SDA):  The SDA pin is bidirectional for serial data transfer. This pin is open-\ndrain driven and may be wire-ORed with any number of other open-drain or open collector\ndevices.\nDEVICE/ADDRESSES (A1, A0): The A1 and A0 pins are device address inputs that are hard-\nwired or left not connected for hardware compatibility with other AT24CXX devices. When the\npins are hardwired, as many as four 128K /256K devices may be addressed on a single bus\nsystem (device addressing is discussed in deta il under the Device Addressing section). If the\npins are left floating, the A1 and A0 pins will be intern\n--- Page 4 ---\n4 AT24C128/256\n0670T–SEEPR–3/07\nTable 2.  Pin Capacitance(1)  \nNote: 1. This parameter is characterized and is not 100% tested.\nTable 3.  DC Characteristics(1)  \nNotes: 1. V IL min and VIH max are reference only and are not tested.\n2. The AT24C128/256 bearing the process letter “B” on the package  (the mark is located in the lower right corner on the top-\nside of the package) are approved for operation in the extended temperature range.\nApplicable over recommended operating range from TA = 25° C, f = 1.0 MHz, VCC = +1.8V.\nSymbol Test Condition Max Units Conditions\nCI/O Input/Output Capacitance (SDA) 8 pF V I/O = 0V\nCIN Input Capacitance (A0, A1, SCL) 6 pF V IN = 0V\nApplicable over recommended operating range from: T AI = –40° C to +85 ° C, V CC = +1.8V to +5.5V; T AE= –40° C to\n+125° C(2),\n--- Page 5 ---\n5\nAT24C128/256\n0670T–SEEPR–3/07\nTable 4.  AC Characteristics – Industrial Temperatures\nNotes: 1. This parameter is characterized and is not 100% tested.\n2. AC measurement conditions:\nRL (connects to VCC): 1.3 kΩ (2.5V, 5V), 10 kΩ (1.8V)\nInput pulse voltages: 0.3 VCC to 0.7 VCC\nInput rise and fall times: ≤ 50 ns\nInput and output timing reference voltages: 0.5 VCC\n3. The Write Cycle Time of 5 ms only applies to the AT24C 128/256 devices bearing the process letter “B” on the package (the\nmark is located in the lower right corner on the top side of the package).\n4. The AT24C128/256 bearing the process letter “B” in the package (the mark is located in the lower right corner on the top\nside of the package), guarantees 1 million write cycle endurance (1.8 – 3.6V). \nApplicable over recommended ope\n--- Page 21 ---\n21\nAT24C128/256\n0670T–SEEPR–3/07\n8A2 – TSSOP\n2325 Orchard Parkway\nSan Jose, CA  95131\nTITLE DRAWING NO.\nR\nREV.  \n5/30/02\nCOMMON DIMENSIONS\n(Unit of Measure = mm)\nSYMBOL MIN NOM MAX NOTE\nD 2.90 3.00 3.10 2, 5\nE 6.40 BSC\nE1 4.30 4.40 4.50 3, 5\nA – – 1.20\nA2 0.80 1.00 1.05\nb 0.19 – 0.30 4\ne 0.65 BSC\nL 0.45 0.60 0.75\nL1 1.00 REF\n8A2, 8-lead, 4.4 mm Body, Plastic \nThin Shrink Small Outline Package (TSSOP)\nNotes: 1. This drawing is for general information only. Refer to JEDEC Drawing MO-153, Variation AA, for proper dimensions, tolerances,  \ndatums, etc.\n2. Dimension D does not include mold Flash, protrusions or gate burrs. Mold Flash, protrusions and gate burrs shall not exceed \n0.15 mm (0.006 in) per side.\n3. Dimension E1 does not include inter-lead Flash or protrusions. Inter-lead Flash and p\n--- Page 22 ---\n22 AT24C128/256\n0670T–SEEPR–3/07\nRevision History\nDoc. Rev. Date Comments\n0670T 3/2007 Added note ‘Not recommended for new design’ to AT24C128 \n0670S 5/2006 Implemented Revision History page; Added Note 1 “Not \nrecommended for new design; please refer to AT24C256B \ndatasheet” to AT24C256 part on Pages 1 and 14\n--- Page 23 ---\n Printed on recycled paper.\n0670T–SEEPR–3/07\nDisclaimer: The information in this document is provided in connection with  Atmel products. No license, express or implied, by estoppel or  otherwise, to any\nintellectual property right is granted by this document  or in connection with the sale of Atmel products. EXCEPT AS SET FORTH IN ATMEL ’S TERMS AND CONDI-\nTIONS OF SALE LOCATED ON ATMEL ’S WEB SITE, ATMEL ASSUMES NO LIABILITY WHATSOEVER AND DISCLAIMS ANY EXPRESS, IMPLIED OR STATUTOR Y\nWARRANTY RELATING TO ITS PRODUCTS INCLUDING, BUT NOT LIMITED TO , THE IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICU LAR\nPURPOSE, OR NON-INFRINGEMENT. IN NO EVENT SHALL ATMEL BE LIABLE FOR ANY DIRECT, INDIRECT, CONSEQUENTIAL, PUNITIVE, SPECIAL OR I NCIDEN-\nTAL DAMAGES (INCLUDING, WITHOUT LIMITATI",
+    "headings": [
+      [
+        2,
+        "2 AT24C128/256"
+      ],
+      [
+        4,
+        "4 AT24C128/256"
+      ],
+      [
+        6,
+        "6 AT24C128/256"
+      ],
+      [
+        8,
+        "8 AT24C128/256"
+      ],
+      [
+        10,
+        "10 AT24C128/256"
+      ],
+      [
+        12,
+        "12 AT24C128/256"
+      ],
+      [
+        14,
+        "14 AT24C128/256"
+      ],
+      [
+        16,
+        "16 AT24C128/256"
+      ],
+      [
+        18,
+        "18 AT24C128/256"
+      ],
+      [
+        22,
+        "22 AT24C128/256"
+      ],
+      [
+        23,
+        "Printed on recycled paper."
+      ]
+    ]
+  },
+  {
+    "filename": "Practical_IoT_Architectures.pdf",
+    "num_pages": 60,
+    "title": "",
+    "sample": "--- Page 1 ---\nPractical IoT Architectures\nBest Practices – Considerations - Advices\n--- Page 2 ---\n(Consumer) IoT\n• Network of connected physical devices\n• Devices collect, process, and exchange data\n• Focus on convenience and user experience\n• Often consumer-oriented\n• Short to medium product lifecycle\n• Cost-driven (low device and connectivity cost)\n\n--- Page 3 ---\nIndustrial IoT\n• IoT applied in industrial and infrastructure \nenvironments\n• Devices are part of critical systems and \nprocesses\n• Focus on reliability and operational continuity\n• Business- and infrastructure-critical\n• Long product lifecycle (10–20+ years)\n• Integration into existing (legacy) systems\n\n--- Page 4 ---\nIoT vs IIoT\nAspect IoT IIoT\nFocus User convenience Operational reliability\nFailure impact Low High\nLifecycle Short Long\nCost driver Hardware cost Downtime cost\n--- Page 5 ---\nWhat Types of \nConnectivity Do \nYou Already \nKnow?\n--- Page 58 ---\nDomestic, International \nand Roaming\nKey Questions for Product Design\n• Will the device operate in a single \ncountry or globally?\n• Is permanent roaming allowed?\nRegulatory & Network Considerations\n• Are there country-specific \nregulations?\n• Which networks are available in the \ntarget region?\n\n--- Page 59 ---\nHow to Design \na Connectivity \nTariff Model\nData Usage\n• Uplink vs. downlink volume\n• Data per message / transmission\n• Frequency (per hour / day / month)\nCriticality\n• Real-time required?\n• Latency constraints\n• Reliability requirements\nCommunication Pattern\n• Scheduled? Periodic?\n• Event-driven\n• On-demand access\nScaling\n• Number of devices \n• Growth over time\n• Geographic distribution\n--- Page 60 ---\nPricing \nExample\nCategory Item Price / Condition\nHardware (one-time) Cellular module ~12 € per device\nSIM card 0 – 2 € depending on form factor\nConnectivity Data plan (option 1) 11 € one-time → includes 8 MB/month per SIM\nData plan (option 2) 26€/Year → Unlimited, speed-based (70 kbit/s)\nAdditional Services VPN per active SIM ~0.08 € / month\nConnectivity platform ~100 € / month\nContract Terms Duration 3 years\nVolume 10,000 devices per year\nTotal volume 30,000 devices\nMinimum commitment 80% of total volume\nConditions Cancellation fee 8%\nCoverage EU-wide roaming (all networks)",
+    "headings": [
+      [
+        1,
+        "Practical IoT Architectures"
+      ],
+      [
+        2,
+        "(Consumer) IoT"
+      ],
+      [
+        3,
+        "Industrial IoT"
+      ],
+      [
+        4,
+        "IoT vs IIoT"
+      ],
+      [
+        5,
+        "What Types of"
+      ],
+      [
+        6,
+        "Categories of IoT"
+      ],
+      [
+        7,
+        "Bluetooth Low"
+      ],
+      [
+        8,
+        "Bluetooth Low"
+      ],
+      [
+        9,
+        "Bluetooth Low"
+      ],
+      [
+        10,
+        "Bluetooth Low"
+      ],
+      [
+        11,
+        "Bluetooth Low"
+      ],
+      [
+        14,
+        "Wi-Fi /"
+      ],
+      [
+        15,
+        "Wi-Fi /"
+      ],
+      [
+        16,
+        "Consumer Cellular"
+      ],
+      [
+        17,
+        "Consumer"
+      ],
+      [
+        18,
+        "Commercial"
+      ],
+      [
+        19,
+        "Commercial"
+      ],
+      [
+        20,
+        "Commercial"
+      ],
+      [
+        21,
+        "Commercial"
+      ],
+      [
+        22,
+        "Standard Lat/Long GPS Coordinate:"
+      ],
+      [
+        23,
+        "Private 5G in"
+      ],
+      [
+        24,
+        "Private 5G in"
+      ],
+      [
+        25,
+        "Private 5G in"
+      ],
+      [
+        26,
+        "Low Power"
+      ],
+      [
+        27,
+        "LTE-M"
+      ],
+      [
+        28,
+        "LTE-M Power-Saving Features"
+      ],
+      [
+        29,
+        "LTE-M Power-Saving Features"
+      ],
+      [
+        30,
+        "NB-IOT"
+      ],
+      [
+        31,
+        "NB-IoT"
+      ],
+      [
+        32,
+        "NON IP Data"
+      ],
+      [
+        33,
+        "Example:"
+      ],
+      [
+        34,
+        "LoRa"
+      ],
+      [
+        35,
+        "LoRa /"
+      ],
+      [
+        36,
+        "450 MHz"
+      ],
+      [
+        37,
+        "450 MHz"
+      ],
+      [
+        38,
+        "Why LPWAN?"
+      ],
+      [
+        40,
+        "Technology Category Data Rate Power"
+      ],
+      [
+        41,
+        "How Would You"
+      ],
+      [
+        43,
+        "BPL for Smart Metering"
+      ],
+      [
+        44,
+        "How Does BPL Work?"
+      ]
+    ]
+  },
+  {
+    "filename": "V00.pdf",
+    "num_pages": 17,
+    "title": "",
+    "sample": "--- Page 1 ---\nTechnische Internetbasierte Systeme\nAuftakt und Überblick\nLinus Hoppe\nAalen University\n23. März 2026\n\n--- Page 2 ---\nAgenda\n1 Einführung\n2 Ablauf\n3 Inhalte\n4 Projekt und Prüfung\n5 Hardware und Labor\n6 Nächste Schritte\n23. März 2026 Linus Hoppe 2\n--- Page 3 ---\nAgenda\n1 Einführung\n2 Ablauf\n3 Inhalte\n4 Projekt und Prüfung\n5 Hardware und Labor\n6 Nächste Schritte\n23. März 2026 Linus Hoppe 3\n--- Page 4 ---\nVorstellung\n• Linus Hoppe\n• Bachelorstudium „Internet der Dinge“ an der Hochschule Aalen\n• Masterstudium „Machine Learning and Data Analytics“ an der Hochschule Aalen\n• Mehrjährige Tätigkeit als Entwickler im Bereich IoT\n• Aktuell an der Hochschule Aalen tätig\n23. März 2026 Linus Hoppe 4\n--- Page 5 ---\nAgenda\n1 Einführung\n2 Ablauf\n3 Inhalte\n4 Projekt und Prüfung\n5 Hardware und Labor\n6 Nächste Schritte\n23. März 2026 Linus Hoppe 5\n--- Page 15 ---\nAgenda\n1 Einführung\n2 Ablauf\n3 Inhalte\n4 Projekt und Prüfung\n5 Hardware und Labor\n6 Nächste Schritte\n23. März 2026 Linus Hoppe 15\n--- Page 16 ---\nWas jetzt wichtig ist\n• Gruppen mit 2 Personen bilden\n• In Canvas eintragen\n• Erste Projektideen sammeln\n• Mögliche Themen frühzeitig mit mir besprechen\n23. März 2026 Linus Hoppe 16\n--- Page 17 ---\nFragen\nFragen und erste Projektideen\n23. März 2026 Linus Hoppe 17",
+    "headings": [
+      [
+        1,
+        "Technische Internetbasierte Systeme"
+      ],
+      [
+        2,
+        "Agenda"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Vorstellung"
+      ],
+      [
+        5,
+        "Agenda"
+      ],
+      [
+        6,
+        "Ablauf der Veranstaltung"
+      ],
+      [
+        7,
+        "Agenda"
+      ],
+      [
+        8,
+        "Thematischer Rahmen des Moduls"
+      ],
+      [
+        9,
+        "Agenda"
+      ],
+      [
+        10,
+        "Projekt und Prüfungsleistung"
+      ],
+      [
+        11,
+        "Organisation und Themenfindung"
+      ],
+      [
+        12,
+        "Agenda"
+      ],
+      [
+        13,
+        "Hardware und Labor"
+      ],
+      [
+        14,
+        "AALeC Repositories"
+      ],
+      [
+        15,
+        "Agenda"
+      ],
+      [
+        16,
+        "Was jetzt wichtig ist"
+      ],
+      [
+        17,
+        "Fragen"
+      ]
+    ]
+  },
+  {
+    "filename": "V01.pdf",
+    "num_pages": 40,
+    "title": "",
+    "sample": "--- Page 1 ---\nTechnische Internetbasierte Systeme\nGrundlagen\nHoppe Linus\nAalen University\n23. März 2026\n\n--- Page 2 ---\nAgenda\n1 Einleitung\n2 Anwendungsfälle\n3 Kommunikation\n4 Protokolle\n5 Werkzeuge\n23. März 2026 Hoppe Linus 2\n--- Page 3 ---\nAgenda\n1 Einleitung\n2 Anwendungsfälle\n3 Kommunikation\n4 Protokolle\n5 Werkzeuge\n23. März 2026 Hoppe Linus 3\n--- Page 4 ---\nMotivation\n• Früher: Zentrale Rechner übernehmen Steuerungsaufgaben\n• Heute: Verteilte Systeme mit vielen kleinen Einheiten\n• Entwicklung: kleiner, günstiger, energieeffizienter\n• Ergebnis: Mikrocontroller übernehmen spezialisierte Aufgaben\n23. März 2026 Hoppe Linus 4\n--- Page 5 ---\nEntwicklung der Hardware\nATmega328\n ESP8266\n Raspberry Pi\n NVIDIA Jetson\nAbbildung: Von einfachen Mikrocontrollern zu komplexen eingebetteten Systemen\n23. März 2026 Hoppe Linus 5\n--- Page 38 ---\nWerkzeug: Grafana\n• Werkzeug zur Visualisierung von Daten\n• Dashboards, Diagramme und Panels\n• Viele Schnittstellen zu Datenquellen\n• Gut geeignet für Monitoring und\nAnalyse\n23. März 2026 Hoppe Linus 38\n--- Page 39 ---\nWerkzeug: Node-RED\n• Browserbasiertes Low-Code-Werkzeug\n• Verknüpft Geräte, Datenquellen und\nLogik\n• Aufbau über Flows und Nodes\n• Gut geeignet für Prototyping und\nAutomatisierung\n• Häufig für IoT-Datenflüsse verwendet\n23. März 2026 Hoppe Linus 39\n--- Page 40 ---\nWerkzeug: Home Assistant\n• Plattform für Hausautomation\n• Lokale Steuerung und hohe\nIntegrationsdichte\n• Dashboards und Automationen\nintegriert\n• Verbindet Geräte, Sensoren und\nDienste\n• Gut geeignet für Smart-Home-Projekte\n23. März 2026 Hoppe Linus 40",
+    "headings": [
+      [
+        1,
+        "Technische Internetbasierte Systeme"
+      ],
+      [
+        2,
+        "Agenda"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Motivation"
+      ],
+      [
+        5,
+        "Entwicklung der Hardware"
+      ],
+      [
+        6,
+        "Technische internetbasierte Systeme"
+      ],
+      [
+        7,
+        "Agenda"
+      ],
+      [
+        8,
+        "IoT und IIoT"
+      ],
+      [
+        9,
+        "Typische IoT-Anwendungsbereiche"
+      ],
+      [
+        10,
+        "Use Case: Smart Home"
+      ],
+      [
+        11,
+        "Use Case: Tracking (AirTag)"
+      ],
+      [
+        12,
+        "Use Case: Windkraftanlagen"
+      ],
+      [
+        13,
+        "Use Case: Zustandsüberwachung von Zügen"
+      ],
+      [
+        14,
+        "Use Case: ÖPNV-Beschleunigung"
+      ],
+      [
+        15,
+        "Use Case: Digitaler Zwilling"
+      ],
+      [
+        16,
+        "Use Case: Digitaler Zwilling - Produktlebenszyklus"
+      ],
+      [
+        17,
+        "Use Case: Assistierte Montage (Pick-by-Light)"
+      ],
+      [
+        18,
+        "Use Case: Landwirtschaft (RFID)"
+      ],
+      [
+        19,
+        "Kommunikation in IoT-Systemen"
+      ],
+      [
+        20,
+        "Agenda"
+      ],
+      [
+        21,
+        "Kurzstreckenkommunikation"
+      ],
+      [
+        22,
+        "NFC / RFID: Grundlagen"
+      ],
+      [
+        23,
+        "NFC vs. RFID"
+      ],
+      [
+        24,
+        "Bluetooth / BLE"
+      ],
+      [
+        25,
+        "Mittlere Reichweite"
+      ],
+      [
+        26,
+        "ZigBee"
+      ],
+      [
+        27,
+        "WLAN (WiFi)"
+      ],
+      [
+        28,
+        "Langstreckenkommunikation"
+      ],
+      [
+        29,
+        "LoRa"
+      ],
+      [
+        30,
+        "NB-IoT / LTE-M"
+      ],
+      [
+        31,
+        "Vergleich der Technologien"
+      ],
+      [
+        32,
+        "Vergleich von IoT-Technologien"
+      ],
+      [
+        33,
+        "Kabelgebundene Kommunikation (Zusatz)"
+      ],
+      [
+        34,
+        "Agenda"
+      ],
+      [
+        35,
+        "IoT-Protokolle (Überblick)"
+      ],
+      [
+        36,
+        "Agenda"
+      ],
+      [
+        37,
+        "Werkzeug: InfluxDB"
+      ],
+      [
+        38,
+        "Werkzeug: Grafana"
+      ],
+      [
+        39,
+        "Werkzeug: Node-RED"
+      ],
+      [
+        40,
+        "Werkzeug: Home Assistant"
+      ]
+    ]
+  },
+  {
+    "filename": "V02.pdf",
+    "num_pages": 48,
+    "title": "",
+    "sample": "--- Page 1 ---\nTechnische Internetbasierte Systeme\nAuftakt, Ablauf und Projektarbeit\nLinus Hoppe\nAalen University\n31. März 2026\n\n--- Page 2 ---\nAgenda\n1 Arduino-Grundlagen\n2 Digital Output\n3 Digital Input\n4 Analoger Input\n5 Analog Output\n6 Hardware-Verbindungen\n31. März 2026 Linus Hoppe 2\n--- Page 3 ---\nAgenda\n1 Arduino-Grundlagen\n2 Digital Output\n3 Digital Input\n4 Analoger Input\n5 Analog Output\n6 Hardware-Verbindungen\n31. März 2026 Linus Hoppe 3\n--- Page 4 ---\nArduino: Programmstruktur\n\u000b \b\n#include <Arduino.h>\nvoid setup() {\nSerial.begin(115200);\n}\nvoid loop() {\nSerial.println(\"Loop running\");\ndelay(1000);\n}\n\n \t\nAblauf\n• Initialisierung in setup()\n• Wiederholung in loop()\nErgebnis\n• Ausgabe jede Sekunde\n31. März 2026 Linus Hoppe 4\n--- Page 5 ---\nSerielle Ausgabe und Debugging\n• Kommunikation über USB / UART\n• Ausgabe mit:\n• Serial.print(...)\n• Serial.println(...)\n• Verwendung:\n• Messwerte und Zustände sichtbar machen\n• Programmablauf nachvollziehen\nEinschränkung\nKein Hardware-Debugger→ keine Breakpoints oder Schritt-Ausführung\nGrund\nESP8266-Boards (z.B. Wemos D1 mini) besitzen kein herausgeführtes JTAG-Interface\n31. März 2026 Linus Hoppe 5\n--- Page 46 ---\nAgenda\n1 Arduino-Grundlagen\n2 Digital Output\n3 Digital Input\n4 Analoger Input\n5 Analog Output\n6 Hardware-Verbindungen\n31. März 2026 Linus Hoppe 46\n--- Page 47 ---\nSerielle Verbindung und Varianten\n• Grundverbindung:\n• TX RX\n• gemeinsame Masse (GND)\n• Initialisierung:\n\u000b \b\nSerial.begin(115200);\n\n \t\n• Typische Baudraten (Bit/s):\n• 9600\n• 115200\nVarianten\n• UART (TTL-Pegel)\n• RS232 (klassisch,±12V)\n• RS485 / Modbus (robust,\nBus-System)\n31. März 2026 Linus Hoppe 47\n--- Page 48 ---\nSerielle Übertragung (UART)\n• Übertragung:\n• Bit für Bit (asynchron)\n• Ablauf eines Frames:\n• Startbit (Beginn)\n• Datenbits (z.B. 8 Bit)\n• Parität (optional)\n• Stopbit (Ende)\n• Parität (Beispiel):\n• gerade Parität:\n• Anzahl der 1-Bits wirdgerade\n31. März 2026 Linus Hoppe 48",
+    "headings": [
+      [
+        1,
+        "Technische Internetbasierte Systeme"
+      ],
+      [
+        2,
+        "Agenda"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Arduino: Programmstruktur"
+      ],
+      [
+        5,
+        "Serielle Ausgabe und Debugging"
+      ],
+      [
+        6,
+        "Hardware-Debugging (JTAG)"
+      ],
+      [
+        7,
+        "Zeitverhalten (ESP8266)"
+      ],
+      [
+        8,
+        "Praxis: Nicht blockierend arbeiten"
+      ],
+      [
+        9,
+        "Agenda"
+      ],
+      [
+        10,
+        "Pinout verstehen (Wemos D1 mini)"
+      ],
+      [
+        11,
+        "Pins im Code definieren"
+      ],
+      [
+        12,
+        "Digitaler Ausgang (GPIO)"
+      ],
+      [
+        13,
+        "Beispiel: LED schalten"
+      ],
+      [
+        14,
+        "Beispiel: LED schalten"
+      ],
+      [
+        15,
+        "Beispiel: Schrittmotor ansteuern"
+      ],
+      [
+        16,
+        "PWM als Impulsfolge"
+      ],
+      [
+        17,
+        "STEP-Signal: Frequenz bestimmt Geschwindigkeit"
+      ],
+      [
+        18,
+        "Schrittmotor: STEP/DIR Steuerung"
+      ],
+      [
+        19,
+        "Schrittmotor: STEP/DIR Steuerung"
+      ],
+      [
+        20,
+        "Agenda"
+      ],
+      [
+        21,
+        "Taster: Grundprinzip"
+      ],
+      [
+        22,
+        "Pull-Up und Pull-Down"
+      ],
+      [
+        23,
+        "Pull-Down-Schaltung"
+      ],
+      [
+        24,
+        "Pull-Up-Schaltung"
+      ],
+      [
+        25,
+        "Pins am XIAO ESP32-S3"
+      ],
+      [
+        26,
+        "Taster einlesen"
+      ],
+      [
+        27,
+        "Interrupts (Grundprinzip)"
+      ],
+      [
+        28,
+        "Interrupt-Trigger (Flanken)"
+      ],
+      [
+        29,
+        "Interrupt Beispiel"
+      ],
+      [
+        30,
+        "Kontaktprellen (Switch Bounce)"
+      ],
+      [
+        31,
+        "Entprellung im Interrupt"
+      ],
+      [
+        32,
+        "Agenda"
+      ],
+      [
+        33,
+        "Analoger Eingang: Potentiometer"
+      ],
+      [
+        34,
+        "Analoger Eingang: Potentiometer"
+      ],
+      [
+        35,
+        "Analog-Digital-Wandlung und Auflösung"
+      ],
+      [
+        36,
+        "Beispiel: Potentiometer"
+      ],
+      [
+        37,
+        "AnalogRead: Hinweis"
+      ],
+      [
+        38,
+        "Serieller Plotter"
+      ],
+      [
+        39,
+        "Analoger Eingang: Beispiel"
+      ],
+      [
+        40,
+        "Agenda"
+      ]
+    ]
+  },
+  {
+    "filename": "V03_DE.pdf",
+    "num_pages": 53,
+    "title": "",
+    "sample": "--- Page 1 ---\nTechnische Internetbasierte Systeme\nHardware-Schnittstellen\nLinus Hoppe\nAalen University\nApril 14, 2026\n\n--- Page 2 ---\nAgenda\n1 Rückblick\n2 UART / TTL\n3 RS232 / RS485\n4 I2C\n5 SPI\n6 OneWire\nApril 14, 2026 Linus Hoppe 2\n--- Page 3 ---\nAgenda\n1 Rückblick\n2 UART / TTL\n3 RS232 / RS485\n4 I2C\n5 SPI\n6 OneWire\nApril 14, 2026 Linus Hoppe 3\n--- Page 4 ---\nRückblick: Grundprinzip\nEingänge Verarbeitung Ausgänge\n• Eingänge: Taster, Sensoren\n• Verarbeitung: loop()\n• Ausgänge: LED, Relais, Motor\nApril 14, 2026 Linus Hoppe 4\n--- Page 5 ---\nRückblick: Signalarten\nDigital\n• HIGH / LOW\n• diskrete Zustände\nAnalog\n• kontinuierliche\nSpannung\n• Wertebereich statt\nZustände\nPWM\n• schnelles HIGH / LOW\n• Mittelwert wirkt analog\nEinordnung\n• Digital → diskret\n• Analog → kontinuierlich\n• PWM → zeitlich\ngemittelt\nApril 14, 2026 Linus Hoppe 5\n--- Page 51 ---\nOneWire – Überblick\nGrundprinzip\n• nur eine Datenleitung + GND\n• Master-Slave-System\n• mehrere Geräte auf einem Bus\nmöglich\n• jedes Gerät besitzt eine eindeutige ID\nVorteile\n• sehr wenig Verdrahtung\n• einfache Integration\n• eindeutige Adressierung\nNachteile\n• geringe Datenrate\n• timingkritisch\n• begrenzte Teilnehmer /\nLeitungslänge\nApril 14, 2026 Linus Hoppe 51\n--- Page 52 ---\nOneWire – Beispiele\nT emperatursensor\n Speicher (EEPROM)\n iButton / ID\nApril 14, 2026 Linus Hoppe 52\n--- Page 53 ---\nVergleich: Kommunikationsschnittstellen\nProtokoll Datenrate Reichweite T eilnehmer T opologie\nOneWire ∼16 kbit/s ∼10–100 m mehrere Bus\nI2C 100 kbit/s – 3.4 Mbit/s ∼1 m viele Bus\nUART (TTL) bis ∼5 Mbit/s ∼1–10 m 2 Punkt-zu-Punkt\nRS232 ∼20 kbit/s ∼15 m 2 Punkt-zu-Punkt\nRS485 bis ∼10 Mbit/s bis ∼1200 m viele Bus\nSPI bis ∼50 MHz ∼<1 m viele Stern / Kaskade\nEinordnung\n• langsam → OneWire, I2C\n• mittel → UART, RS232\n• robust / weit→ RS485\n• schnell → SPI\nApril 14, 2026 Linus Hoppe 53",
+    "headings": [
+      [
+        1,
+        "Technische Internetbasierte Systeme"
+      ],
+      [
+        2,
+        "Agenda"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Rückblick: Grundprinzip"
+      ],
+      [
+        5,
+        "Rückblick: Signalarten"
+      ],
+      [
+        6,
+        "Agenda"
+      ],
+      [
+        7,
+        "UART ohne Parität"
+      ],
+      [
+        8,
+        "UART mit Parität"
+      ],
+      [
+        9,
+        "Serielle Verbindung (UART / TTL)"
+      ],
+      [
+        10,
+        "ESP zu ESP über UART"
+      ],
+      [
+        11,
+        "ESP zu ESP: Hardware-UART"
+      ],
+      [
+        12,
+        "ESP zu ESP: zusätzlicher Hardware-UART"
+      ],
+      [
+        13,
+        "ESP zu ESP: SoftwareSerial"
+      ],
+      [
+        14,
+        "Beispiele: UART in der Praxis"
+      ],
+      [
+        15,
+        "Agenda"
+      ],
+      [
+        16,
+        "RS232"
+      ],
+      [
+        17,
+        "RS232 – Einordnung und Funktionsprinzip"
+      ],
+      [
+        18,
+        "Grenzen von RS232 und Störeinflüsse"
+      ],
+      [
+        19,
+        "Störanfälligkeit bei Single-Ended-Übertragung"
+      ],
+      [
+        20,
+        "RS485 – Überblick und Funktionsprinzip"
+      ],
+      [
+        21,
+        "RS485 – Differenzbildung über mehrere Bits"
+      ],
+      [
+        22,
+        "RS485 – Verhalten bei Störungen"
+      ],
+      [
+        23,
+        "RS485 – Beispiel Sensoren"
+      ],
+      [
+        24,
+        "Agenda"
+      ],
+      [
+        25,
+        "I2C – Überblick"
+      ],
+      [
+        26,
+        "I2C – Adressierung"
+      ],
+      [
+        27,
+        "I2C – Praxisproblem: Adresskonflikte"
+      ],
+      [
+        28,
+        "I2C – Startbedingung und Adressierung"
+      ],
+      [
+        29,
+        "I2C – Startbedingung"
+      ],
+      [
+        30,
+        "I2C – Datenübertragung und Stop"
+      ],
+      [
+        31,
+        "I2C – Stopbedingung"
+      ],
+      [
+        32,
+        "I2C – Ruhezustand"
+      ],
+      [
+        33,
+        "I2C – Pull-Up-Schaltung"
+      ],
+      [
+        34,
+        "I2C – Bedeutung für den Bus"
+      ],
+      [
+        35,
+        "I2C – Gesamter Ablauf"
+      ],
+      [
+        36,
+        "I2C – Beispiele"
+      ],
+      [
+        37,
+        "I2C – Zusammenfassung"
+      ],
+      [
+        38,
+        "I3C – Überblick"
+      ],
+      [
+        39,
+        "I3C – Unterschiede zu I2C"
+      ],
+      [
+        40,
+        "I3C – Beispiel Sensoren"
+      ]
+    ]
+  },
+  {
+    "filename": "V04_DE.pdf",
+    "num_pages": 44,
+    "title": "",
+    "sample": "--- Page 1 ---\nAgenda\n1 Rückblick\n2 Temperatursensoren\n3 Feuchtigkeitssensoren\n4 Abstandssensoren\nApril 21, 2026 Linus Hoppe 1\n--- Page 2 ---\nRückblick: Kommunikationsschnittstellen\nGrundidee\n• Verbindung zwischen Komponenten\n• Grundlage aller eingebetteten Systeme\nWichtige Schnittstellen\n• UART (TX/RX)\n• I2C (SDA, SCL)\n• SPI (MOSI, MISO, SCK, CS)\n• RS485 (differentiell, robust)\nEinordnung\n• kurze Distanz → I2C, SPI\n• lange Distanz → RS485\n• einfache Verbindung → UART\nApril 21, 2026 Linus Hoppe 2\n--- Page 3 ---\nRückblick\nBekannte Sensoren?\nApril 21, 2026 Linus Hoppe 3\n--- Page 4 ---\nEinführung: Sensoren\nDefinition\n• Sensor = Wandlung physikalischer Größen in elektrische Signale\n• Beispiele: Temperatur, Druck, Abstand, Licht\nZusammenhang zur Schnittstelle\n• Sensor misst physikalische Größe\n• Mikrocontroller verarbeitet Daten\n• Schnittstelle überträgt Daten (z.B. I2C, SPI, UART)\nTypische Sensorarten\n• Umwelt: Temperatur, Luftfeuchtigkeit\n• Position: Abstand, Lage, Bewegung\n• Elektrisch: Strom, Spannung\nApril 21, 2026 Linus Hoppe 4\n--- Page 5 ---\nAgenda\n1 Rückblick\n2 Temperatursensoren\n3 Feuchtigkeitssensoren\n4 Abstandssensoren\nApril 21, 2026 Linus Hoppe 5\n--- Page 42 ---\nLiDAR – Einführung\nPrinzip\n• Laserimpulse werden ausgesendet\n• Reflexion am Objekt\n• Laufzeitmessung (ToF)\nMessung\n• Zeit → Entfernung\n• viele Messpunkte gleichzeitig\nErgebnis\n• 3D-Punktwolke der Umgebung\nApril 21, 2026 Linus Hoppe 42\n--- Page 43 ---\nLiDAR – Autonomes Fahren\nUmgebungserkennung in Echtzeit\nApril 21, 2026 Linus Hoppe 43\n--- Page 44 ---\nLiDAR – Kartierung\nErstellung von 3D-Karten\nApril 21, 2026 Linus Hoppe 44",
+    "headings": [
+      [
+        1,
+        "Agenda"
+      ],
+      [
+        2,
+        "Rückblick: Kommunikationsschnittstellen"
+      ],
+      [
+        3,
+        "Rückblick"
+      ],
+      [
+        4,
+        "Einführung: Sensoren"
+      ],
+      [
+        5,
+        "Agenda"
+      ],
+      [
+        6,
+        "Temperatursensoren – Einführung"
+      ],
+      [
+        7,
+        "Thermoelement"
+      ],
+      [
+        8,
+        "Thermoelemente – Kennlinien"
+      ],
+      [
+        9,
+        "Thermoelemente – Vergleich"
+      ],
+      [
+        10,
+        "Thermoelement-Interfaces (1)"
+      ],
+      [
+        11,
+        "Thermoelement-Interfaces (2)"
+      ],
+      [
+        12,
+        "Thermoelement – Einordnung"
+      ],
+      [
+        13,
+        "Widerstandsbasierte Temperatursensoren"
+      ],
+      [
+        14,
+        "NTC – Negative Temperature Coefficient"
+      ],
+      [
+        15,
+        "PTC – Positive Temperature Coefficient"
+      ],
+      [
+        16,
+        "PT100 / PT1000 – RTD-Sensoren"
+      ],
+      [
+        17,
+        "PT100 – Leitungsfehler"
+      ],
+      [
+        18,
+        "RTD-Interfaces"
+      ],
+      [
+        19,
+        "Agenda"
+      ],
+      [
+        20,
+        "Widerstandsbasierter Bodenfeuchtesensor"
+      ],
+      [
+        21,
+        "Bodenfeuchte – Kalibrierung"
+      ],
+      [
+        22,
+        "Kapazitiver Bodenfeuchtesensor: Schematik"
+      ],
+      [
+        23,
+        "Kapazitive Bodenfeuchte – Kalibrierung"
+      ],
+      [
+        24,
+        "Luftfeuchtigkeitssensoren – Einführung"
+      ],
+      [
+        25,
+        "Relative Luftfeuchtigkeit"
+      ],
+      [
+        26,
+        "Luftfeuchtigkeitssensoren – Vergleich"
+      ],
+      [
+        27,
+        "Agenda"
+      ],
+      [
+        28,
+        "Infrarot-Abstandssensor"
+      ],
+      [
+        29,
+        "IR-Abstandssensoren – Beispiele"
+      ],
+      [
+        30,
+        "Ultraschall-Abstandssensor"
+      ],
+      [
+        31,
+        "Ultraschallsensoren – Beispiele"
+      ],
+      [
+        32,
+        "Warum Ultraschall statt IR?"
+      ],
+      [
+        33,
+        "Laser-Abstandssensoren – ToF-Prinzip"
+      ],
+      [
+        34,
+        "Laser-Abstandssensoren – Beispiele"
+      ],
+      [
+        35,
+        "Abstandssensoren – Vergleich"
+      ],
+      [
+        36,
+        "Induktiver Näherungssensor – Prinzip"
+      ],
+      [
+        37,
+        "Kapazitiver Näherungssensor – Prinzip"
+      ],
+      [
+        38,
+        "Radar – Abstandsmessung"
+      ],
+      [
+        39,
+        "Inkrementeller Encoder – Prinzip"
+      ],
+      [
+        40,
+        "Absoluter Encoder – Prinzip"
+      ]
+    ]
+  },
+  {
+    "filename": "V05_DE.pdf",
+    "num_pages": 52,
+    "title": "",
+    "sample": "--- Page 1 ---\nTechnische Internetbasierte Systeme\nSensoren\nLinus Hoppe\nAalen University\n28. April 2026\n\n--- Page 2 ---\nAgenda\n1 Rückblick\n2 Kraft\n3 Durchflusssensoren\n4 Beschleunigung und Rotation\n5 Weitere Sensoren\n6 Aktoren\n28. April 2026 Linus Hoppe 2\n--- Page 3 ---\nAgenda\n1 Rückblick\n2 Kraft\n3 Durchflusssensoren\n4 Beschleunigung und Rotation\n5 Weitere Sensoren\n6 Aktoren\n28. April 2026 Linus Hoppe 3\n--- Page 4 ---\nRückblick: Sensoren\nGrundidee\n• Sensoren wandeln physikalische Größen\nin elektrische Signale\n• Mikrocontroller verarbeitet diese\nSignale weiter\n• Schnittstellen übertragen Messwerte\nLetzte Themen\n• Temperatur\n• Feuchtigkeit\n• Abstand\n• Position und Bewegung\n28. April 2026 Linus Hoppe 4\n--- Page 5 ---\nRückblick: Messprinzipien\nUnterschiedliche Prinzipien\n• Widerstandsänderung\n• Kapazitätsänderung\n• Laufzeitmessung\n• optische Messung\n• induktive Messung\nWichtig\n• Sensorprinzip bestimmt Genauigkeit\n• Auswertung bestimmt Signalqualität\n• Anwendung bestimmt Auswahl\n28. April 2026 Linus Hoppe 5\n--- Page 50 ---\nDC-Motoren – Brushed vs. Brushless\nBrushed DC\n• mechanische Bürsten + Kommutator\n• Strom wird mechanisch umgeschaltet\n• einfach und günstig\n• Verschleiß durch Kontakt\nBrushless DC\n• elektronische Ansteuerung\n• höherer Wirkungsgrad\n• langlebig und wartungsarm\nVeranschaulichung (Video)\nhttps://www.youtube.com/watch?v=wAtN3SEYSco\n28. April 2026 Linus Hoppe 50\n--- Page 51 ---\nMagnetventile – Beispiele\nVentilsteuerung in Fluid- und Gassystemen\n28. April 2026 Linus Hoppe 51\n--- Page 52 ---\nThermischer Aktor – Heizplatte\nFunktionsprinzip\n• Strom fließt durch Heizleiter\n• Widerstand erzeugt Wärme\n• Oberfläche erwärmt sich\nZusammenhang\n• Leistung: P = U · I\n• Wärme ∼ elektrische Leistung\nAnwendungen\n• Kochfeld\n• 3D-Druck (Heizbett)\n• Industrieheizung\n• Sensor-Kalibrierung\n28. April 2026 Linus Hoppe 52",
+    "headings": [
+      [
+        1,
+        "Technische Internetbasierte Systeme"
+      ],
+      [
+        2,
+        "Agenda"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Rückblick: Sensoren"
+      ],
+      [
+        5,
+        "Rückblick: Messprinzipien"
+      ],
+      [
+        6,
+        "Agenda"
+      ],
+      [
+        7,
+        "Einführung: Kraftsensoren"
+      ],
+      [
+        8,
+        "Dehnungsmessstreifen – Funktion"
+      ],
+      [
+        9,
+        "Dehnungsmessstreifen – Widerstandsänderung"
+      ],
+      [
+        10,
+        "Dehnungsmessstreifen – Wheatstone-Brücke"
+      ],
+      [
+        11,
+        "Dehnungsmessstreifen – Brückenkonfigurationen"
+      ],
+      [
+        12,
+        "Dehnungsmessstreifen – Anwendung: Wägezelle"
+      ],
+      [
+        13,
+        "Dehnungsmessstreifen – Predictive Maintenance an Brücken"
+      ],
+      [
+        14,
+        "Dehnungsmessstreifen – Smart Bolts"
+      ],
+      [
+        15,
+        "Piezoelektrische Sensoren – Einführung"
+      ],
+      [
+        16,
+        "Piezoelektrischer Effekt – Funktion"
+      ],
+      [
+        17,
+        "Piezo – Dynamisches Verhalten"
+      ],
+      [
+        18,
+        "Piezo – Anwendung"
+      ],
+      [
+        19,
+        "Kraftmessung – indirekt über Motorstrom (Servo)"
+      ],
+      [
+        20,
+        "Agenda"
+      ],
+      [
+        21,
+        "Durchflussmessung – Flügelradsensor"
+      ],
+      [
+        22,
+        "Durchflussmessung – Magnetisch-induktiv"
+      ],
+      [
+        23,
+        "Durchflussmessung – Wirkdruck"
+      ],
+      [
+        24,
+        "Durchflussmessung – Ultraschall"
+      ],
+      [
+        25,
+        "Durchflussmessung – Vergleich"
+      ],
+      [
+        26,
+        "Durchflussmessung – Anwendungen"
+      ],
+      [
+        27,
+        "Agenda"
+      ],
+      [
+        28,
+        "Beschleunigungssensoren – Einführung"
+      ],
+      [
+        29,
+        "Beschleunigungssensor – Prinzip"
+      ],
+      [
+        30,
+        "Beschleunigung – 3 Achsen"
+      ],
+      [
+        31,
+        "Neigungsmessung"
+      ],
+      [
+        32,
+        "Rotation – Gyroskop"
+      ],
+      [
+        33,
+        "IMU – Kombination"
+      ],
+      [
+        34,
+        "Beschleunigung und Rotation – Anwendungen"
+      ],
+      [
+        35,
+        "Agenda"
+      ],
+      [
+        36,
+        "Sensor – Elektrische Leitfähigkeit"
+      ],
+      [
+        37,
+        "Anwendung – Wasserqualität"
+      ],
+      [
+        38,
+        "Sensor – Partikel / Feinstaub"
+      ],
+      [
+        39,
+        "Anwendung – Luftqualität"
+      ],
+      [
+        40,
+        "Sensor – Trübung"
+      ]
+    ]
+  },
+  {
+    "filename": "V06_DE.pdf",
+    "num_pages": 106,
+    "title": "",
+    "sample": "--- Page 1 ---\nTechnische Internetbasierte Systeme\nSpeicher, Sleep Modes und Scheduling\nLinus Hoppe\nAalen University\nMay 12, 2026\n\n--- Page 2 ---\nAgenda\n1 Rückblick\n2 Superloop\n3 yield(),delay()und Watchdog\n4 Kooperatives Scheduling\n5 RTOS\n6 Dual-Core und echte parallele Aufgaben\n7 Datenblatt-Aufgabe\n8 EEPROM\n9 Sleep Modes\nMay 12, 2026 Linus Hoppe 2\n--- Page 3 ---\nAgenda\n1 Rückblick\n2 Superloop\n3 yield(),delay()und Watchdog\n4 Kooperatives Scheduling\n5 RTOS\n6 Dual-Core und echte parallele Aufgaben\n7 Datenblatt-Aufgabe\n8 EEPROM\n9 Sleep Modes\nMay 12, 2026 Linus Hoppe 3\n--- Page 4 ---\nRückblick: Sensorprinzipien\nDMS\nKraft→Widerstand\nPiezo\nKraftänderung→\nSpannung\nDurchfluss\nLaufzeitdifferenz\nMessen heißt: physikalische Größe→elektrisches Signal\nMay 12, 2026 Linus Hoppe 4\n--- Page 5 ---\nRückblick: Bewegung, Umwelt, Aktoren\nIMU\nBeschleunigung + Rotation\nFeinstaub\nLichtstreuung\nWearable\noptisch / elektrisch\nAktor\nSignal→Bewegung\nSensoren erfassen Zustände. Aktoren verändern Zustände.\nMay 12, 2026 Linus Hoppe 5\n--- Page 104 ---\nESP32: GPIO-Zustand im Deep Sleep halten\n• Normale Variablen gehen im Deep Sleep verloren\n• Auch GPIOs werden nach dem Aufwachen neu initialisiert\n• Der ESP32 kann bestimmte GPIO-Pegel im Deep Sleep halten\n• Dafür wird GPIO-Hold verwendet\nPrinzip\nPin setzen→GPIO-Hold aktivieren→Deep Sleep starten\nWichtig\nDas Halten eines GPIO-Pegels ist kein Speichern von Programmdaten.\nEs hält nur den elektrischen Zustand eines Pins.\nMay 12, 2026 Linus Hoppe 104\n--- Page 105 ---\nESP32: GPIO-Zustand im Deep Sleep halten\n\u000b \b\n#include \"driver/gpio.h\"\n#include \"esp_sleep.h\"\nconst gpio_num_t holdPin = GPIO_NUM_25;\nvoid setup() {\nSerial.begin(115200);\ndelay(5000);\n// Release possible hold from previous sleep cycle\ngpio_deep_sleep_hold_dis();\ngpio_hold_dis(holdPin);\npinMode(25, OUTPUT);\n// Set output state before deep sleep\ndigitalWrite(25, HIGH);\n// Hold this pin state\ngpio_hold_en(holdPin);\n// Keep GPIO hold active during deep sleep\ngpio_deep_sleep_hold_en();\n// Wake up after 10 seconds\nesp_sleep_enable_timer_wakeup(10ULL * 1000000ULL);\n// Start deep sleep\nesp_deep_sleep_start();\n}\n\n \t\nWas passiert?\n• GPIO25wird als Ausgang gesetzt\n• der Pin wird aufHIGHgelegt\n• gpio_hold_en()fixiert diesen\nZustand\n• gpio_deep_sleep_hold_en()hält\nihn auch im Deep Sleep\n• nach 10 Sekund\n--- Page 106 ---\nSleep Modes: Einordnung\nModusAktiv Anwendung\nModem SleepCPU läuft, WLAN reduziert Programm läuft weiter, Funk\nwird gespart\nLight SleepRAM bleibt, CPU pausiert kurze Pausen, schnelle Rückkehr\nDeep Sleepfast alles aus lange Messintervalle, Neustart\nnach Wake-up\nPower OffESP stromlos externe Schaltung schaltet wieder\nein\nMerksatz\nTieferer Schlaf spart mehr Energie, verliert aber den Zustand.\nMay 12, 2026 Linus Hoppe 106",
+    "headings": [
+      [
+        1,
+        "Technische Internetbasierte Systeme"
+      ],
+      [
+        2,
+        "Agenda"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Rückblick: Sensorprinzipien"
+      ],
+      [
+        5,
+        "Rückblick: Bewegung, Umwelt, Aktoren"
+      ],
+      [
+        6,
+        "Agenda"
+      ],
+      [
+        7,
+        "Superloop (Arduino-Modell)"
+      ],
+      [
+        8,
+        "Superloop"
+      ],
+      [
+        9,
+        "Superloop: typische Boards und Frameworks"
+      ],
+      [
+        10,
+        "Blocking Code"
+      ],
+      [
+        11,
+        "Ablauf auf dem Mikrocontroller"
+      ],
+      [
+        12,
+        "Non-Blocking Code"
+      ],
+      [
+        13,
+        "Zeitwerte sind endliche Zähler"
+      ],
+      [
+        14,
+        "Kleines Beispiel:uint8_t"
+      ],
+      [
+        15,
+        "Datentypen und Wertebereiche"
+      ],
+      [
+        16,
+        "Problem: absoluter Zielzeitpunkt"
+      ],
+      [
+        17,
+        "Warum der Vergleich falsch wird"
+      ],
+      [
+        18,
+        "Lösung: vergangene Zeit vergleichen"
+      ],
+      [
+        19,
+        "Warum die Differenz funktioniert"
+      ],
+      [
+        20,
+        "Aufgabe: Mini-Scheduler ohnedelay()"
+      ],
+      [
+        21,
+        "Agenda"
+      ],
+      [
+        22,
+        "Superloop"
+      ],
+      [
+        23,
+        "Interrupts: Grundregeln"
+      ],
+      [
+        24,
+        "yield()unddelay()"
+      ],
+      [
+        25,
+        "Lange Schleife mityield()"
+      ],
+      [
+        26,
+        "Watchdog"
+      ],
+      [
+        27,
+        "Watchdog: Grundprinzip"
+      ],
+      [
+        28,
+        "Watchdog: problematischer Code"
+      ],
+      [
+        29,
+        "Watchdog-Fehlermeldung"
+      ],
+      [
+        30,
+        "ESP Exception Decoder"
+      ],
+      [
+        31,
+        "Dekodierte Watchdog-Ausgabe"
+      ],
+      [
+        32,
+        "Watchdog: korrigierter Code"
+      ],
+      [
+        33,
+        "Agenda"
+      ],
+      [
+        34,
+        "Scheduling: Grundidee"
+      ],
+      [
+        35,
+        "Scheduling: Ablauf über der Zeit"
+      ],
+      [
+        36,
+        "TickTwo: Grundidee"
+      ],
+      [
+        37,
+        "TickTwo: Callbacks und Timer"
+      ],
+      [
+        38,
+        "TickTwo:setup(),loop()und Ablauf"
+      ],
+      [
+        39,
+        "Scheduling mitTickTwo"
+      ],
+      [
+        40,
+        "Scheduling: Jitter durch lange Tasks"
+      ]
+    ]
+  },
+  {
+    "filename": "V07_DE.pdf",
+    "num_pages": 68,
+    "title": "",
+    "sample": "--- Page 1 ---\nTechnische Internetbasierte Systeme\nAuftakt, Ablauf und Projektarbeit\nLinus Hoppe\nAalen University\nMay 19, 2026\n\n--- Page 2 ---\nAgenda\n1 Rückblick\n2 Grundlagen Wifi\n3 WLAN-Zugangsdaten\n4 ESP8266 als Webserver\n5 Asynchroner Webserver\nMay 19, 2026 Linus Hoppe 2\n--- Page 3 ---\nAgenda\n1 Rückblick\n2 Grundlagen Wifi\n3 WLAN-Zugangsdaten\n4 ESP8266 als Webserver\n5 Asynchroner Webserver\nMay 19, 2026 Linus Hoppe 3\n--- Page 4 ---\nRückblick: Vom Superloop zum Scheduling\nsetup()\nTask 1\nTask 2\nTask 3\nloop\nWichtige Regel\nif (now - lastTime >= interval)\nWichtige Punkte\n• delay()blockiert\n• millis()ermöglicht\nnicht-blockierende Abläufe\n• Zeitvergleiche müssen\nRollover-sicher sein\n• Watchdog erkennt blockierte\nProgramme\n• RTOS trennt Aufgaben in Tasks\nMerksatz\nTasks müssen kurz laufen oder CPU-Zeit\nbewusst freigeben.\nMay 19, 2026 Linus Hoppe 4\n--- Page 5 ---\nRückblick: Speicher und Energie\nSpeicher: Was bleibt erhalten?\nSpeicher Nutzung Erhalten\nRAM Variablen nein\nEEPROM Konfiguration ja\nLittleFS Dateien ja\nRTC kurzer Zustand teilweise\nMerksatz\nEEPROM und LittleFS liegen beim ESP meist\nim Flash.\nEnergie: Wann ist der ESP aktiv?\nWake Messen Senden Sleep\n• Modem Sleep: WLAN reduziert\n• Light Sleep: CPU kann pausieren\n• Deep Sleep: Neustart nach Wake-up\n• ESP8266:D0/GPIO16 -> RST\nKernaussage\nAktive Zeit kurz halten, Schreibzugriffe\nbewusst einsetzen.\nMay 19, 2026 Linus Hoppe 5\n--- Page 66 ---\nJavaScript bleibt gleich\nasync f un ct io n u p d a t e S t a t u s () {\nconst res po ns e = await fetch ( ’/ api / status ’);\nconst data = await re sp on se . json ();\nd ocu me nt . g e t E l e m e n t B y I d ( ’ status ’). t e x t C o n t e n t =\nJSON . s t r i n g i f y ( data , null , 2);\n}\ns e t I n t e r v a l ( updateStatus , 1000);\nu p d a t e S t a t u s ();\n< pre id =\" status \" > loading ... </ pre >\nWarum gleich?\n• Der Browser kennt nur URLs.\n• /api/statusbleibt gleich.\n• JSON-Format bleibt gleich.\n• Nur die Serverbibliothek auf\ndem ESP ändert sich.\nTrennung\nFrontend und API bleiben stabil.\nDie ESP-Implementierung kann\nwechseln.\nMay 19, 2026 Linus Hoppe 66\n--- Page 67 ---\nArchitektur mit Async-Webserver\n• /liefert die statische Oberfläche.\n• /api/statusliefert Messwerte als JSON.\n• /led?state=1führt eine Aktion aus.\n• Statische Dateien liegen in LittleFS.\n• Handler bleiben kurz und senden klare HTTP-Statuscodes.\nVorteil\nDerloop()muss den Webserver nicht aktiv pollen. Die Anwendung bleibt übersichtlicher.\nGrenze\nAsynchroner Server bedeutet nicht automatisch schnellerer Anwendungscode. Blockierende\nHandler bleiben ein Problem.\nMay 19, 2026 Linus Hoppe 67\n--- Page 68 ---\nESP8266 und ESP32: Einordnung\n• Die Webserver-API ist auf ESP8266 und ESP32 sehr ähnlich.\n• Für diese Folien wird der Code bewusst für den ESP8266 gezeigt.\n• Auf dem ESP32 wird stattESPAsyncTCPdie BibliothekAsyncTCPverwendet.\n• Im Hintergrund unterscheiden sich Ressourcen, TCP-Anbindung und Tasking.\nPraktische Aussage\nDie Architektur bleibt gleich: statische Oberfläche, API-Routen, kurze Handler. Nur die\nHardware- und Bibliotheksbasis darunter ist unterschiedlich.\nMay 19, 2026 Linus Hoppe 68",
+    "headings": [
+      [
+        1,
+        "Technische Internetbasierte Systeme"
+      ],
+      [
+        2,
+        "Agenda"
+      ],
+      [
+        3,
+        "Agenda"
+      ],
+      [
+        4,
+        "Rückblick: Vom Superloop zum Scheduling"
+      ],
+      [
+        5,
+        "Rückblick: Speicher und Energie"
+      ],
+      [
+        6,
+        "Agenda"
+      ],
+      [
+        7,
+        "ESP8266: WiFi als laufendes Teilsystem"
+      ],
+      [
+        8,
+        "WiFi-Verbindung als Zustandsautomat"
+      ],
+      [
+        9,
+        "Betriebsarten des ESP8266"
+      ],
+      [
+        10,
+        "Minimaler Verbindungsaufbau"
+      ],
+      [
+        11,
+        "WLAN-Verbindungsaufbau mit Fehlerpfad"
+      ],
+      [
+        12,
+        "Verbindungsaufbau mit statischer IP"
+      ],
+      [
+        13,
+        "Nutzbare Verbindung: Status und Rückgabewerte"
+      ],
+      [
+        14,
+        "RSSI als Signalqualitätsmaß"
+      ],
+      [
+        15,
+        "Agenda"
+      ],
+      [
+        16,
+        "Zugangsdaten nicht direkt im Sketch"
+      ],
+      [
+        17,
+        "Möglichkeiten zur WLAN-Konfiguration"
+      ],
+      [
+        18,
+        "Variante 1: lokale Dateisecrets.h"
+      ],
+      [
+        19,
+        "secrets.hnicht versionieren"
+      ],
+      [
+        20,
+        "Fehlende Zugangsdaten früh erkennen"
+      ],
+      [
+        21,
+        "Variante 2: Zugangsdaten als Konfigurationsdatei"
+      ],
+      [
+        22,
+        "Warum ein LittleFS-Upload-Tool?"
+      ],
+      [
+        23,
+        "Aufgabe: LittleFS-Uploader installieren"
+      ],
+      [
+        24,
+        "Projektstruktur und Konfigurationsdatei"
+      ],
+      [
+        25,
+        "PlatformIO: LittleFS-Upload"
+      ],
+      [
+        26,
+        "Projektstruktur und Datei"
+      ],
+      [
+        27,
+        "Minimaler Testcode"
+      ],
+      [
+        28,
+        "Typische Fehlerquellen"
+      ],
+      [
+        29,
+        "WiFi mit Konfigurationsdatei starten"
+      ],
+      [
+        30,
+        "WiFiManager: Ablauf"
+      ],
+      [
+        31,
+        "WiFiManager: Minimalbeispiel"
+      ],
+      [
+        32,
+        "WiFiManager robuster einsetzen"
+      ],
+      [
+        33,
+        "Espressif Unified Provisioning"
+      ],
+      [
+        34,
+        "Provisioning: SoftAP oder BLE"
+      ],
+      [
+        35,
+        "Vergleich der Ansätze"
+      ],
+      [
+        36,
+        "Agenda"
+      ],
+      [
+        37,
+        "Grundidee: ESP8266 als Server"
+      ],
+      [
+        38,
+        "Request-Response-Prinzip auf dem ESP8266"
+      ],
+      [
+        39,
+        "Webserver im ESP8266: interner Ablauf"
+      ],
+      [
+        40,
+        "Minimaler Webserver"
+      ]
+    ]
+  }
+]

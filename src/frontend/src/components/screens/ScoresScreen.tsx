@@ -2,6 +2,7 @@
 
 import type { ScoreEntry } from "@/types/quiz";
 import styles from "./screens.module.css";
+import Confetti from "../Confetti";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -16,6 +17,7 @@ export default function ScoresScreen({ scores, ended = false, onRestart }: Props
 
   return (
     <div className={styles.screen}>
+      {ended && <Confetti />}
       <h2 className={styles.scoresTitle}>{ended ? "Endergebnis" : "Zwischenstand"}</h2>
 
       <div className={styles.scoresList}>
@@ -23,6 +25,7 @@ export default function ScoresScreen({ scores, ended = false, onRestart }: Props
           <div
             key={entry.device_id}
             className={`${styles.scoreRow} ${i === 0 ? styles.scoreRowFirst : ""}`}
+            style={{ "--i": i } as React.CSSProperties}
           >
             <span className={styles.scoreRank}>
               {i < 3 ? MEDALS[i] : `${i + 1}.`}

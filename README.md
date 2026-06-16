@@ -24,7 +24,6 @@ Das System teilt sich in drei Hauptkomponenten auf:
 * [src/backend](file:///Users/merluee/ITS/src/backend) — Python Game Master, REST-API und Fragensets.
 * [src/frontend](file:///Users/merluee/ITS/src/frontend) — Next.js Beamer-Projektor-Anwendung.
 * [src/firmware/Controller](file:///Users/merluee/ITS/src/firmware/Controller) — PlatformIO C++ Firmware für die AALeC-Clients.
-* [src/firmware/Hotspot](file:///Users/merluee/ITS/src/firmware/Hotspot) — Firmware für den Arduino Uno R4, der den WLAN-Hotspot aufspannt.
 * [.github/workflows](file:///Users/merluee/ITS/.github/workflows) — CI/CD Workflows für automatisierte Builds und Releases.
 * [docs](file:///Users/merluee/ITS/docs) — Weiterführende Dokumentationen und Anleitungen.
 

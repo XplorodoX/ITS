@@ -21,6 +21,7 @@ import functools
 import json
 import logging
 import os
+import random
 import re
 import sys
 import threading
@@ -47,6 +48,7 @@ T_CONTROL      = "quiz/control"       # Steuerbefehle (Start, Restart, etc.) vom
 T_NAMELIST     = "quiz/namelist"      # Liste verfügbarer Namen für Controller-Displays (retained)
 T_NAMELIST_SET = "quiz/namelist/set"  # Setzen der Namensliste durch das Admin-Frontend
 T_NAME_RESET   = "quiz/name/reset"    # Befehl zum Zurücksetzen der manuellen Namenswahl
+T_NAME_SET     = "quiz/name/set"      # Pusht einen konkreten Namen an ein einzelnes Gerät (retained, pro device_id)
 T_RENAME_SET   = "quiz/rename/set"    # Umbenennen eines einzelnen Geräts durch das Admin-Frontend
 T_REMOVE_SET   = "quiz/remove/set"    # Entfernen (Kick) eines Geräts durch das Admin-Frontend
 
@@ -115,8 +117,10 @@ def _collect_question_errors(questions: list[dict]) -> list[str]:
             if str(q.get("correct", "")).upper() not in ("HIGHER", "LOWER"):
                 missing.append("correct (HIGHER | LOWER)")
         elif q_type in ("poti_target", "temp_target"):
-            if "target" not in q:
-                missing.append("target")
+            has_target = "target" in q
+            has_range  = isinstance(q.get("target_range"), list) and len(q["target_range"]) == 2
+            if not has_target and not has_range:
+                missing.append("target or target_range [min, max]")
         if missing:
             errors.append(f"{label} (type={q_type!r}): missing/invalid: {', '.join(missing)}")
     return errors
@@ -255,6 +259,9 @@ class GameState:
     question_id: int = 0
     question_start: float = 0.0
     answers: dict = field(default_factory=dict)  # device_id -> {"answer": str, "elapsed_ms": int}
+    # Für poti_target/temp_target: der für die aktuelle Frage ausgewürfelte Zielwert
+    # (bei Fragen mit target_range jedes Mal neu, sonst der feste "target"-Wert)
+    current_target: Optional[float] = None
 
 
 class GameMaster:
@@ -273,6 +280,9 @@ class GameMaster:
         self.broker        = broker
         self.port          = port
         self.questions     = questions
+        # Aktuelle Spielreihenfolge — wird bei jedem start_game() frisch gemischt,
+        # damit das Original (self.questions, für den Admin-Editor) unangetastet bleibt.
+        self._play_questions: list[dict] = list(questions)
         self.state_file    = state_file
         self.questions_dir = questions_dir
         self.active_set    = active_set
@@ -338,8 +348,9 @@ class GameMaster:
         errs = _collect_question_errors(qs)
         if errs:
             return f"validation error: {errs[0]}"
-        self.questions  = qs
-        self.active_set = name
+        self.questions       = qs
+        self._play_questions = list(qs)
+        self.active_set      = name
         print(f"[questions] switched to {name!r} ({len(qs)} questions)")
         self._publish_question_sets()
         return None
@@ -538,6 +549,9 @@ class GameMaster:
             return
         self.players[device_id].name = name
         print(f"[rename] {device_id} -> '{name}'")
+        # retained, damit das Gerät den Namen auch beim naechsten (Re-)Connect erhaelt,
+        # falls es im Moment des Umbenennens offline ist
+        self._publish(f"{T_NAME_SET}/{device_id}", {"name": name}, retain=True)
         self._publish_players()
         self._save_state()
 
@@ -607,6 +621,20 @@ class GameMaster:
         """MQTT Helper zum Senden von JSON-Payloads."""
         self.client.publish(topic, json.dumps(payload), retain=retain)
 
+    @staticmethod
+    def _roll_target(q: dict, ndigits: int = 0):
+        """Würfelt den Zielwert für poti_target/temp_target-Fragen aus.
+
+        Fragen mit "target_range": [min, max] bekommen bei jedem Aufruf einen
+        frischen Zufallswert (mehr Abwechslung bei wiederholtem Spielen),
+        Fragen mit festem "target" bleiben unverändert.
+        """
+        if "target_range" in q:
+            lo, hi = q["target_range"]
+            value  = random.uniform(lo, hi)
+            return round(value, ndigits) if ndigits else int(round(value))
+        return q["target"]
+
     @_locked
     def start_game(self):
         """Startet das Quiz (Übergang WAITING -> erste QUESTION)."""
@@ -618,26 +646,28 @@ class GameMaster:
             print(f"[game] only {online} player(s) online, need {MIN_PLAYERS}")
             return
         print(f"[game] starting with {online} online players")
+        self._play_questions   = random.sample(self.questions, len(self.questions))
         self.gs.question_index = 0
         self._transition_to_question()
 
     @_locked
     def _transition_to_question(self):
         """Wechselt in die Fragen-Ankündigung (QUESTION)."""
-        if self.gs.question_index >= len(self.questions):
+        if self.gs.question_index >= len(self._play_questions):
             self._transition_to_ended()
             return
 
-        q = self.questions[self.gs.question_index]
+        q = self._play_questions[self.gs.question_index]
         self.gs.state          = "QUESTION"
         self.gs.question_id   += 1
         self.gs.question_start = time.monotonic()
         self.gs.answers        = {}
+        self.gs.current_target = None
 
         q_type  = q.get("type", "mcq")
         payload: dict = {
             "id":           self.gs.question_id,
-            "total":        len(self.questions),
+            "total":        len(self._play_questions),
             "type":         q_type,
             "text":         q["text"],
             "time_limit_s": q["time_limit_s"],
@@ -651,10 +681,12 @@ class GameMaster:
             payload["reference"] = q["reference"]
             payload["unit"]      = q.get("unit", "")
         elif q_type == "poti_target":
-            payload["target"]    = q["target"]
+            self.gs.current_target = self._roll_target(q)
+            payload["target"]    = self.gs.current_target
             payload["tolerance"] = q.get("tolerance", 5)
         elif q_type == "temp_target":
-            payload["target"]    = q["target"]
+            self.gs.current_target = self._roll_target(q, ndigits=1)
+            payload["target"]    = self.gs.current_target
             payload["tolerance"] = q.get("tolerance", 1.5)
         else:
             payload["options"] = q["options"]
@@ -669,7 +701,7 @@ class GameMaster:
     @_locked
     def _transition_to_voting(self):
         """Öffnet die Abstimmungsphase (VOTING). Controller dürfen nun Antworten senden."""
-        q = self.questions[self.gs.question_index]
+        q = self._play_questions[self.gs.question_index]
         self.gs.state          = "VOTING"
         self.gs.question_start = time.monotonic()
         self._publish_state(remaining_s=q["time_limit_s"])
@@ -692,7 +724,7 @@ class GameMaster:
         """Zeigt die richtige Antwort auf dem Beamer (REVEAL) und berechnet Punkte."""
         if self.gs.state != "VOTING":
             return
-        q            = self.questions[self.gs.question_index]
+        q            = self._play_questions[self.gs.question_index]
         q_type       = q.get("type", "mcq")
         time_limit_ms = q["time_limit_s"] * 1000
         players_snapshot = dict(self.players)
@@ -845,7 +877,7 @@ class GameMaster:
 
     def _reveal_poti_target(self, q: dict, players: dict):
         """Berechnet linear abfallende Punkte für Poti-Target Challenges."""
-        correct   = int(q["target"])
+        correct   = int(self.gs.current_target if self.gs.current_target is not None else q["target"])
         tolerance = int(q.get("tolerance", 5))
         answers_out = []
 
@@ -888,7 +920,7 @@ class GameMaster:
 
     def _reveal_temp_target(self, q: dict, players: dict):
         """Berechnet linear abfallende Punkte für Temperatursensor-Challenges."""
-        correct   = float(q["target"])
+        correct   = float(self.gs.current_target if self.gs.current_target is not None else q["target"])
         tolerance = float(q.get("tolerance", 1.5))
         answers_out = []
 
@@ -971,7 +1003,7 @@ class GameMaster:
         self._save_state()
 
         # Nach 5 Sekunden entweder zur nächsten Frage springen oder das Spiel beenden
-        if self.gs.question_index < len(self.questions):
+        if self.gs.question_index < len(self._play_questions):
             self._set_timer(5, self._transition_to_question)
         else:
             self._set_timer(5, self._transition_to_ended)

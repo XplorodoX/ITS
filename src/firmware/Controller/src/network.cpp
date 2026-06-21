@@ -75,6 +75,25 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
+  if (t == "quiz/name/set/" + deviceId) {
+    const char* src = doc["name"] | "";
+    if (strlen(src) == 0) return;
+
+    char incoming[6];
+    strncpy(incoming, src, 5);
+    incoming[5] = '\0';
+    // Nur übernehmen wenn tatsächlich abweichend, sonst würde publishConnect()
+    // unten eine Endlosschleife mit dem Server auslösen (Connect -> Name-Push -> Connect -> ...)
+    if (strcmp(playerName, incoming) != 0) {
+      strcpy(playerName, incoming);
+      saveNameToEEPROM();
+      Serial.print("[NAME] Server hat Namen gesetzt: ");
+      Serial.println(playerName);
+      publishConnect(); // Bestaetigung an Server, damit dessen Spielerliste synchron bleibt
+    }
+    return;
+  }
+
   if (t == "quiz/namelist") {
     nameListCount = 0;
     JsonArray arr = doc["names"].as<JsonArray>();
@@ -231,7 +250,8 @@ bool mqttReconnect() {
     mqtt.subscribe("quiz/namelist");
     mqtt.subscribe("quiz/name/reset");
     mqtt.subscribe(("quiz/ack/" + deviceId).c_str());
-    Serial.println("[MQTT] Subscribed (device topics): quiz/state, quiz/question, quiz/reveal, quiz/namelist, quiz/name/reset, quiz/ack");
+    mqtt.subscribe(("quiz/name/set/" + deviceId).c_str());
+    Serial.println("[MQTT] Subscribed (device topics): quiz/state, quiz/question, quiz/reveal, quiz/namelist, quiz/name/reset, quiz/ack, quiz/name/set");
     publishConnect();
     return true;
   }

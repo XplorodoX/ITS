@@ -133,30 +133,30 @@
   },
   {
     "type": "poti_target",
-    "text": "Poti-Challenge: Stelle das Poti genau auf den Wert für ein ausgeglichenes UART-Paritätsbit ein (50%)!",
-    "target": 50,
+    "text": "Poti-Challenge: Stelle den Regler so genau wie möglich auf den angezeigten Zielwert ein — nur nach Gefühl, die aktuelle Position bleibt verdeckt!",
+    "target_range": [15, 90],
     "tolerance": 5,
     "time_limit_s": 25
   },
   {
     "type": "poti_target",
-    "text": "Poti-Challenge: Simuliere ein schwaches WLAN-Signal von ca. 85% Dämpfung (Stelle das Poti auf 85%)!",
-    "target": 85,
-    "tolerance": 5,
+    "text": "Poti-Challenge (Profi): Diesmal mit weniger Toleranz — triff den Zielwert möglichst genau!",
+    "target_range": [15, 90],
+    "tolerance": 3,
     "time_limit_s": 25
   },
   {
     "type": "temp_target",
-    "text": "Temperatur-Challenge: Erwärme den Sensor auf die Schalttemperatur eines Heizlüfters von 28°C!",
-    "target": 28.0,
+    "text": "Temperatur-Challenge: Bringe den Sensor durch Anfassen, Anhauchen oder Pusten auf die angezeigte Zieltemperatur!",
+    "target_range": [19.0, 31.0],
     "tolerance": 1.0,
     "time_limit_s": 45
   },
   {
     "type": "temp_target",
-    "text": "Temperatur-Challenge: Kühle oder halte den Sensor stabil auf angenehmer Zimmertemperatur von 22°C!",
-    "target": 22.0,
-    "tolerance": 1.0,
+    "text": "Temperatur-Challenge (Profi): Halte den Sensor möglichst exakt auf der Zieltemperatur — kleinere Toleranz!",
+    "target_range": [19.0, 31.0],
+    "tolerance": 0.7,
     "time_limit_s": 45
   }
 ]

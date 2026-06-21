@@ -8,7 +8,7 @@ void drawSpinner(int cx, int cy, int r, int frame);
 void pulseLEDs(unsigned long t, RgbColor base);
 void showConnectingFrame();
 void showConnected();
-void showNameSelect();
+void showNameSelect(bool networkActive = true);
 void showWaiting();
 void showEstimate();
 void showHigherLower();

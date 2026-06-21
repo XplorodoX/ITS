@@ -69,7 +69,7 @@ void showConnected() {
   for (int i = 0; i < 5; i++) setLED(i,c_off);
 }
 
-void showNameSelect() {
+void showNameSelect(bool networkActive) {
   static const char charset[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const int charsetLen = (int)strlen(charset);
   int idx[5] = {1, 1, 1, 1, 1}; // Start bei 'A'
@@ -90,8 +90,15 @@ void showNameSelect() {
   aalec.button_changed(); // Sync/consume button state to avoid registering initial press as a character select click
 
   while (true) {
-    checkConnection();
-    mqtt.loop();
+    // Vor dem initialen WLAN-Aufbau ist weder WiFi noch MQTT konfiguriert —
+    // checkConnection()/mqtt.loop() wuerden hier faelschlich einen
+    // Verbindungsverlust annehmen und blockierend WiFi.begin() ausloesen,
+    // was die Namenseingabe einfriert. Daher nur aufrufen, wenn das Netzwerk
+    // bereits aktiv ist (z. B. bei spaeterem Namens-Reset aus showWaiting()).
+    if (networkActive) {
+      checkConnection();
+      mqtt.loop();
+    }
 
     if (aalec.rotate_changed()) {
       int rot = aalec.get_rotate();
@@ -393,14 +400,10 @@ void showPotiTarget() {
     aalec.display.setFont(ArialMT_Plain_24);
     aalec.display.drawString(64, 16, "Ziel: " + String(potiTarget) + "%");
 
-    // Aktueller Poti-Wert klein unten
+    // Aktuelle Poti-Position bleibt bewusst verdeckt — sonst waere es kein
+    // Gefuehls-Test mehr, sondern nur Zahlen auf einen Zielwert abgleichen.
     aalec.display.setFont(ArialMT_Plain_10);
-    aalec.display.drawString(64, 43, "Jetzt: " + String(potiNow) + "%");
-
-    // Fortschrittsbalken (Poti-Position)
-    int barW = map(potiNow, 0, 100, 0, 124);
-    aalec.display.drawRect(2, 54, 124, 8);
-    aalec.display.fillRect(2, 54, barW, 8);
+    aalec.display.drawString(64, 43, "Nach Gefuehl einstellen");
 
     displayShow();
     delay(20);

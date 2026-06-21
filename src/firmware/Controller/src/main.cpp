@@ -110,7 +110,7 @@ void setup() {
   // fordern wir den Spieler direkt zur Namenseingabe auf, noch vor dem WLAN-Verbindungsaufbau.
   if (strlen(playerName) == 0) {
     Serial.println("[BOOT] Kein Name im EEPROM vorhanden — fordere Eingabe an");
-    showNameSelect();
+    showNameSelect(false); // WiFi/MQTT sind hier noch nicht initialisiert
   }
 
   Serial.print("[WiFi] Verbinde mit '");

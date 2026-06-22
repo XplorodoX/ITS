@@ -144,6 +144,45 @@
       pointer-events: none
     }
 
+    .pdf-btn:hover {
+      background: var(--blue) !important;
+      color: #fff !important;
+      box-shadow: 0 0 15px rgba(77, 142, 240, 0.4);
+    }
+
+    @media print {
+      @page {
+        size: 1920px 1080px;
+        margin: 0;
+      }
+      html, body {
+        width: 1920px;
+        height: auto;
+        overflow: visible !important;
+        background: #07090f !important;
+      }
+      #vp {
+        position: relative !important;
+        transform: none !important;
+        width: 1920px;
+        height: auto;
+        left: 0 !important;
+        top: 0 !important;
+      }
+      .slide {
+        position: relative !important;
+        display: flex !important;
+        opacity: 1 !important;
+        pointer-events: all !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        height: 1080px !important;
+      }
+      #nav, #snum, #fsbtn, .pdf-btn {
+        display: none !important;
+      }
+    }
+
     /* typography */
     h1 {
       font-size: 90px;
@@ -1841,6 +1880,73 @@
       </div>
     </section>
 
+    <!-- ========== SLIDE 4b — WIRING & INTERFACES ========== -->
+    <section class="slide" id="swiring">
+      <div class="sh">
+        <div class="sh-label">03b — Verkabelung &amp; Schnittstellen</div>
+        <h2>GPIO-Belegung &amp; Hardware-Schnittstellen</h2>
+      </div>
+      <div class="sc" style="padding-top:20px;align-items:start">
+        <div class="g2" style="gap:60px;width:100%;align-items:start">
+          <!-- Left: GPIO Table -->
+          <div>
+            <table style="width:100%">
+              <thead>
+                <tr>
+                  <th>GPIO</th>
+                  <th>Pin-Name</th>
+                  <th>Hardware-Komponente &amp; Funktion</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="mono" style="color:var(--orange)">GPIO 0</span></td><td><span class="mono" style="color:var(--muted)">D3</span></td><td>Taster (Encoder-Knopf) &rarr; Antwort bestätigen</td></tr>
+                <tr><td><span class="mono" style="color:var(--purple)">GPIO 2</span></td><td><span class="mono" style="color:var(--muted)">D4</span></td><td>WS2812B RGB-LED-Streifen (Status &amp; Feedback)</td></tr>
+                <tr><td><span class="mono" style="color:var(--cyan)">GPIO 4</span></td><td><span class="mono" style="color:var(--muted)">D2</span></td><td>I²C SDA &rarr; OLED-Display (Datensignal)</td></tr>
+                <tr><td><span class="mono" style="color:var(--cyan)">GPIO 5</span></td><td><span class="mono" style="color:var(--muted)">D1</span></td><td>I²C SCL &rarr; OLED-Display (Taktsignal)</td></tr>
+                <tr><td><span class="mono" style="color:var(--green)">GPIO 12</span></td><td><span class="mono" style="color:var(--muted)">D6</span></td><td>Rotary Encoder Kanal A (Auswahl scrollen)</td></tr>
+                <tr><td><span class="mono" style="color:var(--green)">GPIO 14</span></td><td><span class="mono" style="color:var(--muted)">D5</span></td><td>Rotary Encoder Kanal B (Auswahl scrollen)</td></tr>
+                <tr><td><span class="mono" style="color:var(--red)">GPIO 15</span></td><td><span class="mono" style="color:var(--muted)">D8</span></td><td>Piezo-Beeper &rarr; Sound-Feedback (PWM)</td></tr>
+                <tr><td><span class="mono" style="color:var(--blue)">A0 (ADC)</span></td><td><span class="mono" style="color:var(--muted)">A0</span></td><td>Potentiometer (Eingabe für Challenges / Schätzen)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Right: Schnittstellen-Karten -->
+          <div class="col" style="gap:20px">
+            <!-- Card 1 -->
+            <div class="card" style="display:flex;flex-direction:column;gap:10px;padding:24px 28px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span class="pill pill-cyan" style="font-size:16px;padding:4px 12px">I²C-Bus</span>
+                <span class="mono" style="font-size:15px;color:var(--muted)">Adresse 0x3C</span>
+              </div>
+              <p style="font-size:20px;font-weight:600;margin-top:6px">OLED SH1106 Display &amp; BME680 Sensor</p>
+              <p style="font-size:17px;color:var(--muted);line-height:1.5">Der 2-Draht-Bus spart Pins. Das Display wird kontinuierlich im Loop aktualisiert. Der BME680 misst Temperatur für die Sensor-Challenge.</p>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="card" style="display:flex;flex-direction:column;gap:10px;padding:24px 28px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span class="pill pill-blue" style="font-size:16px;padding:4px 12px">Analoger Eingang (ADC)</span>
+                <span class="mono" style="font-size:15px;color:var(--muted)">10-Bit (0-1023)</span>
+              </div>
+              <p style="font-size:20px;font-weight:600;margin-top:6px">Potentiometer-Erfassung</p>
+              <p style="font-size:17px;color:var(--muted);line-height:1.5">Der ESP8266 besitzt nur einen ADC-Pin. Dieser erfasst den Spannungsabgriff des Drehreglers zur kontinuierlichen Positionserkennung bei Schätzfragen.</p>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="card" style="display:flex;flex-direction:column;gap:10px;padding:24px 28px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span class="pill pill-green" style="font-size:16px;padding:4px 12px">Digitale GPIOs</span>
+                <span class="mono" style="font-size:15px;color:var(--muted)">Interrupts &amp; PWM</span>
+              </div>
+              <p style="font-size:20px;font-weight:600;margin-top:6px">Eingabetasten &amp; Signalausgabe</p>
+              <p style="font-size:17px;color:var(--muted);line-height:1.5">Der Rotary Encoder wird per Hardware-Interrupts ausgewertet, um Drehungen verzögerungsfrei zu erkennen. Der Beeper wird mit Frequenz-PWM moduliert.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ========== SLIDE — OLED DISPLAY ========== -->
     <section class="slide" id="soled">
       <div class="sh">
@@ -2054,120 +2160,80 @@
 
 
 
-    <!-- ========== SLIDE — TECH OVERVIEW ========== -->
-    <section class="slide" id="stech">
+    <!-- ========== SLIDE 5 — SOFTWARE ARCHITECTURE & CODE ========== -->
+    <section class="slide" id="ssoftware">
       <div class="sh">
-        <div class="sh-label">05 — Technologieübersicht</div>
-        <h2>Was haben wir genutzt?</h2>
+        <div class="sh-label">05 — Software-Struktur</div>
+        <h2>Code-Aufbau &amp; Software-Architektur</h2>
       </div>
       <div class="sc" style="padding-top:20px;align-items:start">
-        <div class="g2" style="gap:60px;width:100%;align-items:start">
-
-          <!-- Hardware -->
-          <div class="col" style="gap:16px">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
-              <div style="width:6px;height:36px;background:var(--orange);border-radius:3px"></div>
-              <h3 style="color:var(--orange)">Hardware</h3>
+        <div class="g3" style="gap:28px;width:100%;align-items:stretch">
+          
+          <!-- Module 1: Firmware -->
+          <div class="card" style="display:flex;flex-direction:column;gap:18px;flex:1">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="mono" style="font-size:16px;font-weight:700;color:var(--orange);background:rgba(245,167,51,.1);border:1px solid rgba(245,167,51,.3);border-radius:8px;padding:4px 10px">C++</span>
+              <span style="font-size:21px;font-weight:700">1. Firmware</span>
             </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="pill pill-orange" style="font-size:16px;padding:4px 12px;flex-shrink:0">MCU</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">Wemos D1 Mini</p>
-                <p style="font-size:17px;color:var(--muted)">ESP8266 · WiFi 802.11 b/g/n · AALeC-V3 Plattform</p>
+            <div style="font-size:16px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:-6px">src/firmware/Controller</div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+              <div style="border-left:2px solid var(--orange);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">main.cpp</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Initialisierung und Haupt-Loop (Superloop). Verteilt Events je nach Spielzustand an die Untermodule.</p>
               </div>
-            </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="pill pill-cyan" style="font-size:16px;padding:4px 12px;flex-shrink:0">I²C</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">OLED SH1106</p>
-                <p style="font-size:17px;color:var(--muted)">128×64 · Fragen &amp; Antwortanzeige</p>
+              <div style="border-left:2px solid var(--orange);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">display.cpp</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Umfasst alle <span class="mono" style="color:var(--cyan)">showState()</span>-Renderfunktionen zur pixelgenauen OLED-Zeichnung im Hauptloop.</p>
               </div>
-            </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="pill pill-purple" style="font-size:16px;padding:4px 12px;flex-shrink:0">GPIO</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">WS2812B LEDs × 5</p>
-                <p style="font-size:17px;color:var(--muted)">RGB-Feedback · richtig = grün / falsch = rot</p>
-              </div>
-            </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="pill pill-green" style="font-size:16px;padding:4px 12px;flex-shrink:0">ENC</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">Rotary Encoder + Taster</p>
-                <p style="font-size:17px;color:var(--muted)">Auswahl scrollen · Antwort bestätigen</p>
-              </div>
-            </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="pill pill-blue" style="font-size:16px;padding:4px 12px;flex-shrink:0">ADC</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">Potentiometer</p>
-                <p style="font-size:17px;color:var(--muted)">A0 · 10-bit · Schätz- &amp; Poti-Challenge</p>
-              </div>
-            </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="pill pill-cyan" style="font-size:16px;padding:4px 12px;flex-shrink:0">I²C</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">BME680 Sensor</p>
-                <p style="font-size:17px;color:var(--muted)">Temperatur · Luftdruck · Temperatur-Challenge</p>
+              <div style="border-left:2px solid var(--orange);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">network.cpp</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Verwaltet die WiFi-Verbindung und die blockierungsfreie MQTT-Reconnect-Schleife.</p>
               </div>
             </div>
           </div>
 
-          <!-- Software -->
-          <div class="col" style="gap:16px">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
-              <div style="width:6px;height:36px;background:var(--green);border-radius:3px"></div>
-              <h3 style="color:var(--green)">Software</h3>
+          <!-- Module 2: Backend -->
+          <div class="card" style="display:flex;flex-direction:column;gap:18px;flex:1">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="mono" style="font-size:16px;font-weight:700;color:var(--green);background:rgba(37,209,110,.1);border:1px solid rgba(37,209,110,.3);border-radius:8px;padding:4px 10px">Py</span>
+              <span style="font-size:21px;font-weight:700">2. Game Master / API</span>
             </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="mono"
-                style="font-size:16px;font-weight:700;color:var(--orange);background:rgba(245,167,51,.1);border:1px solid rgba(245,167,51,.3);border-radius:8px;padding:4px 10px;flex-shrink:0">C++</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">C++ · PlatformIO</p>
-                <p style="font-size:17px;color:var(--muted)">Firmware · PubSubClient · ArduinoJson · NeoPixel</p>
+            <div style="font-size:16px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:-6px">src/backend</div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+              <div style="border-left:2px solid var(--green);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">game.py (GameMaster)</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Zentrale Logik-Klasse. Verwaltet Spielerlisten, MQTT-Events und die State Machine des Quizzes.</p>
+              </div>
+              <div style="border-left:2px solid var(--green);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">scoring.py</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Berechnet Punkte in Echtzeit: <span class="mono" style="color:var(--yellow)">Punkte = Basis (1000) + Zeitbonus (max. 500) &times; Streak-Bonus</span>.</p>
+              </div>
+              <div style="border-left:2px solid var(--green);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">app.py (Flask API)</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Stellt REST-Endpoints bereit, über die das Admin-Frontend Fragensets laden und aktivieren kann.</p>
               </div>
             </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="mono"
-                style="font-size:16px;font-weight:700;color:var(--cyan);background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:8px;padding:4px 10px;flex-shrink:0">MQ</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">Eclipse Mosquitto</p>
-                <p style="font-size:17px;color:var(--muted)">MQTT Broker · TCP :1883 · WebSocket :9001</p>
-              </div>
+          </div>
+
+          <!-- Module 3: Frontend -->
+          <div class="card" style="display:flex;flex-direction:column;gap:18px;flex:1">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="mono" style="font-size:16px;font-weight:700;color:var(--blue);background:rgba(77,142,240,.1);border:1px solid rgba(77,142,240,.3);border-radius:8px;padding:4px 10px">TS</span>
+              <span style="font-size:21px;font-weight:700">3. Frontend</span>
             </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="mono"
-                style="font-size:16px;font-weight:700;color:var(--green);background:rgba(37,209,110,.1);border:1px solid rgba(37,209,110,.3);border-radius:8px;padding:4px 10px;flex-shrink:0">Py</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">Python 3 · Flask</p>
-                <p style="font-size:17px;color:var(--muted)">Game Master · REST-API · paho-mqtt · pytest</p>
+            <div style="font-size:16px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:-6px">src/frontend</div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+              <div style="border-left:2px solid var(--blue);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">Beamer-View (page.tsx)</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Die Projektionsfläche der Lobby, Frageseiten und des Leaderboards für die gesamte Klasse.</p>
               </div>
-            </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="mono"
-                style="font-size:16px;font-weight:700;color:var(--blue);background:rgba(77,142,240,.1);border:1px solid rgba(77,142,240,.3);border-radius:8px;padding:4px 10px;flex-shrink:0">TS</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">Next.js · React · TypeScript</p>
-                <p style="font-size:17px;color:var(--muted)">Beamer-Frontend · Admin-Panel · mqtt.js</p>
+              <div style="border-left:2px solid var(--blue);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">Admin-Panel (/admin)</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Erlaubt dem Spielleiter, den Ablauf manuell zu triggern, Fragensets hochzuladen und Spieler zu verwalten.</p>
               </div>
-            </div>
-            <div
-              style="display:flex;align-items:center;gap:18px;padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-              <span class="mono"
-                style="font-size:16px;font-weight:700;color:var(--muted);background:rgba(78,98,128,.1);border:1px solid rgba(78,98,128,.3);border-radius:8px;padding:4px 10px;flex-shrink:0">DC</span>
-              <div>
-                <p style="font-size:22px;font-weight:600">Docker / Podman</p>
-                <p style="font-size:17px;color:var(--muted)">Container-Deployment · podman-compose</p>
+              <div style="border-left:2px solid var(--blue);padding-left:12px">
+                <p style="font-size:18px;font-weight:600;color:var(--text)">mqtt.js Integration</p>
+                <p style="font-size:16px;color:var(--muted);line-height:1.4">Abonniert den Broker direkt im Browser über WebSockets (Port 9001), um sofort auf Zustandsänderungen zu reagieren.</p>
               </div>
             </div>
           </div>
@@ -3492,6 +3558,16 @@
           </div>
 
         </div>
+        <div style="display:flex;justify-content:center;margin-top:40px">
+          <button onclick="window.print()" class="pdf-btn" style="display:flex;align-items:center;gap:10px;padding:12px 24px;background:var(--surface2);border:1px solid var(--blue);border-radius:10px;font-family:'Inter',sans-serif;font-size:20px;color:var(--text);cursor:pointer;transition:all 0.2s">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            PDF-Version generieren (Drucken)
+          </button>
+        </div>
       </div>
     </section>
 
@@ -3512,7 +3588,7 @@
 
   <script>
     (function () {
-      const TOTAL = 21;
+      const TOTAL = 22;
       let cur = 0;
 
       // ── build dot nav ──
@@ -3586,8 +3662,8 @@
         // slide number
         document.getElementById('snum').textContent = (cur + 1) + ' / ' + TOTAL;
 
-        // state machine on slide 7
-        if (cur === 6) {
+        // state machine on slide sbackend (index 9)
+        if (cur === 9) {
           smIdx = 0;
           clearInterval(smTimer);
           animateSM();
@@ -3596,7 +3672,7 @@
           clearInterval(smTimer);
         }
 
-        // animate mqtt topics on slide 8
+        // animate mqtt topics on slide s8 (index 7)
         if (cur === 7) {
           document.querySelectorAll('.mqtt-topic').forEach((el, i) => {
             el.classList.remove('go');

@@ -44,7 +44,10 @@ const DEFAULTS: Record<QType, AnyQ> = {
 
 // URL der Admin-REST-API des Game Masters — zur Laufzeit aus dem Hostnamen abgeleitet
 function getApiBase(): string {
-  return process.env.NEXT_PUBLIC_API_URL ?? `http://${window.location.hostname}:8080`;
+  if (typeof window !== "undefined") {
+    return process.env.NEXT_PUBLIC_API_URL ?? `http://${window.location.hostname}:8080`;
+  }
+  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 }
 
 // ── Eingabefeld-Wrapper-Komponente ───────────────────────────────────────────

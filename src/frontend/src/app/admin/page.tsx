@@ -42,8 +42,10 @@ const DEFAULTS: Record<QType, AnyQ> = {
   temp_target:  { type: "temp_target",  text: "", target: 25.0, tolerance: 2.0, time_limit_s: 20 },
 };
 
-// URL der Admin-REST-API des Game Masters
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+// URL der Admin-REST-API des Game Masters — zur Laufzeit aus dem Hostnamen abgeleitet
+function getApiBase(): string {
+  return process.env.NEXT_PUBLIC_API_URL ?? `http://${window.location.hostname}:8080`;
+}
 
 // ── Eingabefeld-Wrapper-Komponente ───────────────────────────────────────────
 
@@ -196,7 +198,7 @@ export default function AdminPage() {
   /** Lade alle Fragensets von der REST-API */
   async function loadSets() {
     try {
-      const res = await fetch(`${API}/api/question-sets`);
+      const res = await fetch(`${getApiBase()}/api/question-sets`);
       setSets(await res.json());
     } catch { flash("API nicht erreichbar", false); }
   }
@@ -204,7 +206,7 @@ export default function AdminPage() {
   /** Öffnet und lädt ein bestimmtes Fragenset in den Editor */
   async function openSet(name: string) {
     try {
-      const res = await fetch(`${API}/api/question-sets/${name}`);
+      const res = await fetch(`${getApiBase()}/api/question-sets/${name}`);
       if (!res.ok) { flash(`Set '${name}' nicht gefunden`, false); return; }
       setQuestions(await res.json());
       setCurrentSet(name);
@@ -218,7 +220,7 @@ export default function AdminPage() {
   async function saveSet() {
     if (!currentSet) return;
     try {
-      const res = await fetch(`${API}/api/question-sets/${currentSet}`, {
+      const res = await fetch(`${getApiBase()}/api/question-sets/${currentSet}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(questions),
@@ -235,7 +237,7 @@ export default function AdminPage() {
   async function deleteSet(name: string) {
     if (!confirm(`Set '${name}' löschen?`)) return;
     try {
-      const res = await fetch(`${API}/api/question-sets/${name}`, { method: "DELETE" });
+      const res = await fetch(`${getApiBase()}/api/question-sets/${name}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) { flash(data.error ?? "Fehler", false); return; }
       if (currentSet === name) { setCurrentSet(null); setQuestions([]); }
@@ -251,7 +253,7 @@ export default function AdminPage() {
       flash("Name: nur Buchstaben, Zahlen, - und _", false); return;
     }
     try {
-      const res = await fetch(`${API}/api/question-sets/${name}`, {
+      const res = await fetch(`${getApiBase()}/api/question-sets/${name}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify([]),
@@ -267,7 +269,7 @@ export default function AdminPage() {
   /** Markiert ein Fragenset als aktiv beim Game Master */
   async function setActive(name: string) {
     try {
-      const res = await fetch(`${API}/api/active-set`, {
+      const res = await fetch(`${getApiBase()}/api/active-set`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -334,7 +336,7 @@ export default function AdminPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Quiz Admin</h1>
-        <span className={styles.apiUrl}>{API}</span>
+        <span className={styles.apiUrl} suppressHydrationWarning>{getApiBase()}</span>
 
         <div className={styles.gameControl}>
           <span className={styles.stateBadge}>{STATE_LABELS[currentState] ?? currentState}</span>

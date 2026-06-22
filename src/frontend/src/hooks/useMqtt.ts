@@ -26,10 +26,6 @@ export interface QuizData {
   publish: (topic: string, payload: object) => void;
 }
 
-// WebSocket-Adresse des MQTT-Brokers (Fallback auf localhost:9001 für Dev-Umgebungen)
-const BROKER_WS_URL =
-  process.env.NEXT_PUBLIC_MQTT_URL ?? "ws://localhost:9001";
-
 /**
  * Ein React Hook zur Verwaltung der Echtzeit-MQTT-Kommunikation.
  * Baut die WebSocket-Verbindung auf, subskribiert alle relevanten Themen
@@ -49,8 +45,10 @@ export function useMqtt(): QuizData {
   const [players,       setPlayers]       = useState<Players | null>(null);
 
   useEffect(() => {
+    // URL zur Laufzeit ableiten: env-Variable hat Vorrang, sonst gleicher Host wie die Seite
+    const brokerUrl = process.env.NEXT_PUBLIC_MQTT_URL ?? `ws://${window.location.hostname}:9001`;
     // 1. Verbindung zum MQTT-Broker über WebSockets herstellen
-    const client = mqtt.connect(BROKER_WS_URL);
+    const client = mqtt.connect(brokerUrl);
     clientRef.current = client;
 
     // 2. Event-Handler für erfolgreiche Verbindung: Kanäle abonnieren

@@ -34,13 +34,12 @@ Das System teilt sich in drei Hauptkomponenten auf:
 Du musst die Anwendung und die Firmware nicht selbst kompilieren. Du kannst direkt die vorgefertigten Container-Images und die kompilierte Firmware aus den GitHub Releases nutzen:
 
 ### 1. Pre-compiled Controller-Firmware flashen
-1. Lade die fertig kompilierte `firmware.bin` aus dem neuesten **GitHub Release** dieses Repositories herunter.
-2. Lege die Datei einfach direkt in den Ordner `src/firmware/Controller/` ab.
-3. Verbinde den AALeC-Controller per USB mit deinem Mac.
-4. Führe das Upload-Skript aus:
-   ```bash
-   ./src/firmware/Controller/upload.sh
-   ```
+Das Flashen kann plattformübergreifend (Windows, macOS, Linux) vollautomatisch über das mitgelieferte Python-Skript `flash.py` im Hauptverzeichnis durchgeführt werden:
+1. Verbinde den AALeC-Controller per USB mit deinem Computer.
+2. Führe das Skript aus:
+   * **macOS / Linux**: `python3 flash.py`
+   * **Windows**: `python flash.py`
+   *(Das Skript lädt automatisch die neueste `firmware.bin` von GitHub herunter, sucht den passenden seriellen USB-Port und flasht die Firmware mit der robusten Standard-Baudrate von 115200).*
 
 ### 2. Pre-built Docker/Podman Container starten
 Die `docker-compose.yml` im Hauptverzeichnis ist standardmäßig so konfiguriert, dass sie die fertigen Images direkt aus der GitHub Container Registry (GHCR) herunterlädt. Starte alle Services einfach mit:
@@ -90,9 +89,11 @@ Dies startet:
 * Das **Frontend** unter `http://localhost:3000`.
 
 ### Schritt 3: Firmware flashen
-1. Verbinde das AALeC-Gerät per USB mit deinem Mac.
-2. Verbinde deinen Mac mit dem WLAN-Hotspot **`AALeC-Quiz`** (Passwort: `12345678`).
-3. Öffne PlatformIO und führe den **Upload** für das Projekt `Controller` aus.
+1. Verbinde das AALeC-Gerät per USB mit deinem Computer.
+2. Führe das automatische Flash-Skript aus:
+   * **macOS / Linux**: `python3 flash.py`
+   * **Windows**: `python flash.py`
+   *(Alternativ kannst du in VS Code mit PlatformIO das Projekt `Controller` öffnen und direkt den **Upload**-Befehl ausführen).*
 
 ---
 

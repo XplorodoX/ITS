@@ -3223,12 +3223,11 @@
                     <span style="font-size:19px;font-weight:600;color:var(--green)">Linux / macOS</span>
                   </div>
                   <div class="code" style="font-size:16px;line-height:1.6">
-                    <span class="cmt"># Methode A (Empfohlen - Nutzt internes PIO-esptool)</span>
-                    <span class="fn">./src/firmware/Controller/upload.sh</span> <span class="val">[port]</span>
+                    <span class="cmt"># Methode A (Automatisch - Empfohlen)</span>
+                    <span class="fn">python3</span> flash.py
 
-                    <span class="cmt"># Methode B (Manuell via Python & pip)</span>
-                    <span class="fn">pip</span> install esptool
-                    <span class="fn">python3</span> -m esptool <span class="val">--port</span> /dev/cu.usbserial-110 <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
+                    <span class="cmt"># Methode B (Manuell)</span>
+                    <span class="fn">python3</span> -m esptool <span class="val">--port</span> [port] <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
                   </div>
                 </div>
 
@@ -3242,19 +3241,17 @@
                     <span style="font-size:19px;font-weight:600;color:var(--blue)">Windows</span>
                   </div>
                   <div class="code" style="font-size:16px;line-height:1.6">
-                    <span class="cmt"># esptool installieren (einmalig)</span>
-                    <span class="fn">pip</span> install esptool
+                    <span class="cmt"># Methode A (Automatisch - Empfohlen)</span>
+                    <span class="fn">python</span> flash.py
 
-                    <span class="cmt"># Flashen (COM-Port ggf. anpassen)</span>
+                    <span class="cmt"># Methode B (Manuell)</span>
                     <span class="fn">python</span> -m esptool <span class="val">--port</span> COM3 <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
                   </div>
                 </div>
 
               </div>
               <p style="margin-top:14px;font-size:17px;color:var(--muted)">
-                Ports: Unter Linux meist <span class="mono" style="color:var(--green)">/dev/ttyUSB0</span>.
-                Unter macOS meist <span class="mono" style="color:var(--green)">/dev/cu.usbserial-*</span> oder <span class="mono" style="color:var(--green)">/dev/cu.wchusbserial-*</span>.
-                Unter Windows im Gerätemanager unter <span class="mono" style="color:var(--green)">COM &amp; LPT</span> nachsehen.
+                Das Python-Skript <span class="mono" style="color:var(--green)">flash.py</span> lädt automatisch die neueste Release-Firmware von GitHub und erkennt den USB-Port.
               </p>
             </div>
           </div>

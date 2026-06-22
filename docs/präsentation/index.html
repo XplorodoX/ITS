@@ -3228,8 +3228,7 @@
 
                     <span class="cmt"># Methode B (Manuell via Python & pip)</span>
                     <span class="fn">pip</span> install esptool
-                    <span class="fn">python3</span> -m esptool <span class="val">--port</span> /dev/cu.usbserial-110 \
-                      <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
+                    <span class="fn">python3</span> -m esptool <span class="val">--port</span> /dev/cu.usbserial-110 <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
                   </div>
                 </div>
 
@@ -3247,8 +3246,7 @@
                     <span class="fn">pip</span> install esptool
 
                     <span class="cmt"># Flashen (COM-Port ggf. anpassen)</span>
-                    <span class="fn">python</span> -m esptool <span class="val">--port</span> COM3 \
-                      <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
+                    <span class="fn">python</span> -m esptool <span class="val">--port</span> COM3 <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
                   </div>
                 </div>
 

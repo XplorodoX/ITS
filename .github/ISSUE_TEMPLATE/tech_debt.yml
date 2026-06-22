@@ -1,0 +1,56 @@
+name: Technical Debt
+description: Track debt items and follow-up cleanup work
+title: "[TD] "
+labels: ["tech-debt"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What was changed and why did debt remain?
+      placeholder: Explain the tradeoff and current limitation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What risks or costs does this debt create?
+      placeholder: Build instability, maintenance overhead, future migration effort, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Cleanup
+      description: What should be done to resolve this debt?
+      placeholder: Concrete remediation steps.
+    validations:
+      required: true
+
+  - type: input
+    id: owner
+    attributes:
+      label: Suggested Owner
+      description: Person or team that should drive this item.
+      placeholder: @username or team
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - high
+        - medium
+        - low
+    validations:
+      required: true
+
+  - type: input
+    id: target
+    attributes:
+      label: Target Milestone
+      description: Optional milestone or timeframe.
+      placeholder: Sprint 3 / 2026-Q2

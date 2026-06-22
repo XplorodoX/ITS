@@ -18,13 +18,16 @@ course_files/*
 # 2. IDEs & Editors
 # ==========================================
 .idea/
+ITS.code-workspace
 *.iml
 *.ipr
 .vscode/
 **/.vscode/
 *.sublime-project
+todo.md
 *.sublime-workspace
 *.swp
+course_files/*
 *~
 
 # ==========================================

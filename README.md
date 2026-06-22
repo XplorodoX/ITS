@@ -112,6 +112,19 @@ Nachdem das System läuft und die Geräte im Beamer-Frontend (`http://localhost:
 
 ---
 
+## 📊 Projekt-Präsentation
+
+Die Abschlusspräsentation für das Projekt befindet sich direkt im Repository:
+* **Pfad:** [docs/präsentation/index.html](file:///Users/merluee/ITS/docs/präsentation/index.html) (lokal im Browser öffnen)
+* **Steuerung:** 
+  * `Pfeiltasten` oder `Leertaste` zum Blättern
+  * `F` zum Umschalten in den Vollbildmodus
+* **PDF-Export (Druckversion):** 
+  * Navigiere zur letzten Folie („Referenzen & Ressourcen“) und klicke auf den Button **„PDF-Version generieren (Drucken)“** (oder drücke `Cmd + P` / `Strg + P` im Browser).
+  * Wähle als Ziel **„Als PDF speichern“**, stelle das Layout auf **Querformat** und aktiviere in den Einstellungen **„Hintergrundgrafiken“**, damit das dunkle Theme korrekt gedruckt wird.
+
+---
+
 ## 🛠️ CI/CD Pipeline
 
 Das Repository verfügt über eine automatisierte GitHub Actions Pipeline:

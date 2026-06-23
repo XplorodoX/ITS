@@ -148,31 +148,90 @@ def select_port(cli_port):
         except (ValueError, IndexError):
             print("Ungültige Auswahl. Bitte erneut wählen.")
 
-def download_latest_release(local_file_path):
-    repo = "XplorodoX/ITS"
-    url = f"https://api.github.com/repos/{repo}/releases/latest"
-    print(f"\n--- GitHub Release Download ---")
-    print(f"Frage neuestes Release von GitHub ab ({repo})...")
+def get_git_repo():
+    try:
+        # Führe Git-Befehl aus, um die Remote-URL zu ermitteln
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        url = result.stdout.strip()
+        # Entferne .git am Ende, falls vorhanden
+        if url.endswith(".git"):
+            url = url[:-4]
+        # Extrahiere owner/repo
+        if "github.com/" in url:
+            parts = url.split("github.com/")[-1].split("/")
+            if len(parts) >= 2:
+                return f"{parts[0]}/{parts[1]}"
+        elif "github.com:" in url:
+            parts = url.split("github.com:")[-1].split("/")
+            if len(parts) >= 2:
+                return f"{parts[0]}/{parts[1]}"
+    except Exception:
+        pass
+    return "XplorodoX/ITS"  # Fallback
+
+def download_release_from_github(local_file_path, repo=None, releases_count=3, asset_name="firmware.bin"):
+    if not repo:
+        repo = get_git_repo()
+        
+    url = f"https://api.github.com/repos/{repo}/releases"
+    print(f"\n--- GitHub Release Auswahl ---")
+    print(f"Frage die neuesten Releases von GitHub ab ({repo})...")
     
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Python-esptool-downloader"})
         with urllib.request.urlopen(req, timeout=10) as response:
-            release_data = json.loads(response.read().decode('utf-8'))
+            releases = json.loads(response.read().decode('utf-8'))
             
-        tag_name = release_data.get("tag_name", "unknown")
-        print(f"Neueste Version auf GitHub: {tag_name}")
-        
-        assets = release_data.get("assets", [])
-        download_url = None
-        for asset in assets:
-            if asset.get("name") == "firmware.bin":
-                download_url = asset.get("browser_download_url")
+        if not isinstance(releases, list) or len(releases) == 0:
+            raise Exception("Keine Releases auf GitHub gefunden.")
+            
+        # Filter die neuesten Releases, die das gewünschte Asset besitzen
+        valid_releases = []
+        for release in releases:
+            assets = release.get("assets", [])
+            for asset in assets:
+                if asset.get("name") == asset_name:
+                    valid_releases.append({
+                        "tag_name": release.get("tag_name", "unknown"),
+                        "name": release.get("name", ""),
+                        "download_url": asset.get("browser_download_url")
+                    })
+                    break
+            if len(valid_releases) >= releases_count:
                 break
                 
-        if not download_url:
-            raise Exception("Keine 'firmware.bin' im neuesten GitHub Release gefunden.")
+        if not valid_releases:
+            raise Exception(f"Keine Releases mit dem Asset '{asset_name}' gefunden.")
             
-        print(f"Lade firmware.bin herunter...")
+        print(f"\nVerfügbare Firmware-Releases auf GitHub ({repo}):")
+        for idx, rel in enumerate(valid_releases):
+            name_str = f" ({rel['name']})" if rel['name'] else ""
+            print(f"[{idx + 1}] {rel['tag_name']}{name_str}")
+            
+        while True:
+            try:
+                choice = input(f"Bitte wählen Sie ein Release (1-{len(valid_releases)}): ").strip()
+                if not choice:
+                    continue
+                choice_idx = int(choice) - 1
+                if 0 <= choice_idx < len(valid_releases):
+                    selected_release = valid_releases[choice_idx]
+                    break
+                else:
+                    print(f"Bitte eine Zahl zwischen 1 und {len(valid_releases)} eingeben.")
+            except ValueError:
+                print("Ungültige Eingabe. Bitte eine Zahl eingeben.")
+                
+        print(f"\nAusgewähltes Release: {selected_release['tag_name']}")
+        download_url = selected_release['download_url']
+        
+        print(f"Lade {asset_name} herunter...")
         
         def report_progress(block_num, block_size, total_size):
             read_so_far = block_num * block_size
@@ -184,7 +243,7 @@ def download_latest_release(local_file_path):
             sys.stdout.flush()
             
         urllib.request.urlretrieve(download_url, local_file_path, report_progress)
-        print("\nDownload erfolgreich abgeschlossen.")
+        print(f"\nDownload von {asset_name} erfolgreich abgeschlossen.")
         return True
         
     except Exception as e:
@@ -194,11 +253,11 @@ def download_latest_release(local_file_path):
             return True
         return False
 
-def find_local_firmware():
+def find_local_firmware(filename="firmware.bin"):
     paths = [
-        "firmware.bin",
-        "src/firmware/Controller/.pio/build/esp12e/firmware.bin",
-        "src/firmware/Controller/firmware.bin"
+        filename,
+        f"src/firmware/Controller/.pio/build/esp12e/{filename}",
+        f"src/firmware/Controller/{filename}"
     ]
     for p in paths:
         if os.path.exists(p):
@@ -211,6 +270,9 @@ def main():
     parser.add_argument("--baud", type=int, default=115200, help="Baudrate zum Flashen (Standard: 115200 für hohe Zuverlässigkeit, bei Timeout reduzieren oder erhöhen)")
     parser.add_argument("--local", action="store_true", help="Kein GitHub-Download, verwende eine lokale firmware.bin")
     parser.add_argument("--file", default="firmware.bin", help="Pfad zur lokalen Firmware-Datei (Standard: firmware.bin)")
+    parser.add_argument("--repo", default=None, help="GitHub Repository (z.B. XplorodoX/ITS). Wenn nicht angegeben, wird es über Git ermittelt.")
+    parser.add_argument("--releases-count", type=int, default=3, help="Anzahl der anzuzeigenden Releases (Standard: 3)")
+    parser.add_argument("--asset", default="firmware.bin", help="Name des Firmware-Assets auf GitHub (Standard: firmware.bin)")
     
     args = parser.parse_args()
     
@@ -219,10 +281,14 @@ def main():
     print("==================================================")
     
     firmware_file = args.file
+    # Falls der Standardwert verwendet wird, aber ein anderes Asset gewählt wurde,
+    # passen wir den lokalen Dateinamen an.
+    if args.file == "firmware.bin" and args.asset != "firmware.bin":
+        firmware_file = args.asset
     
     if args.local:
         print(f"Verwende lokalen Modus. Suche nach {firmware_file}...")
-        local_path = find_local_firmware()
+        local_path = find_local_firmware(firmware_file)
         if local_path and local_path != firmware_file:
             print(f"Gefundene lokale Firmware: {local_path}")
             use_found = input(f"Diese Firmware verwenden? ({local_path}) [Y/n]: ").strip().lower()
@@ -233,10 +299,15 @@ def main():
             print(f"Fehler: Firmware-Datei {firmware_file} existiert nicht!")
             sys.exit(1)
     else:
-        success = download_latest_release(firmware_file)
+        success = download_release_from_github(
+            firmware_file,
+            repo=args.repo,
+            releases_count=args.releases_count,
+            asset_name=args.asset
+        )
         if not success:
             print("\nGitHub Download fehlgeschlagen.")
-            local_path = find_local_firmware()
+            local_path = find_local_firmware(firmware_file)
             if local_path:
                 print(f"Eine lokale Firmware-Datei wurde gefunden: {local_path}")
                 use_local = input("Möchten Sie diese stattdessen flashen? [Y/n]: ").strip().lower()

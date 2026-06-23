@@ -329,7 +329,23 @@ def main():
     print(f"Port:  {port}")
     print(f"Baud:  {args.baud}")
     print("--------------------------------------------------")
-    
+
+    # EEPROM löschen (optional)
+    erase = input("\nEEPROM vorher löschen? (Namen werden zurückgesetzt) [y/N]: ").strip().lower()
+    if erase in ("y", "yes"):
+        erase_cmd = [
+            sys.executable, "-m", "esptool",
+            "--chip", "esp8266",
+            "--port", port,
+            "erase_flash"
+        ]
+        print("Lösche Flash (inkl. EEPROM) …")
+        erase_result = subprocess.run(erase_cmd)
+        if erase_result.returncode != 0:
+            print("Fehler beim Löschen des Flash. Abbruch.")
+            sys.exit(erase_result.returncode)
+        print("Flash erfolgreich gelöscht.\n")
+
     # Run esptool using the python interpreter
     cmd = [
         sys.executable, "-m", "esptool",

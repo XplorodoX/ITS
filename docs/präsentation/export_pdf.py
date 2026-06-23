@@ -112,7 +112,7 @@ def main():
 
                     // CSS-Klassen-basierte Animationen auslösen (restartAnims ist in IIFE)
                     ['.stack-card', '.s2-point', '.step', '.prob',
-                     '.outlook-item', '.qcard', '.mqtt-topic'].forEach(sel => {{
+                     '.outlook-item', '.qcard', '.mqtt-topic', '.agenda-item'].forEach(sel => {{
                         slide.querySelectorAll(sel).forEach(el => el.classList.add('go'));
                     }});
 

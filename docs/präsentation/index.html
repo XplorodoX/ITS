@@ -152,34 +152,75 @@
 
     @media print {
       @page {
-        size: 1920px 1080px;
+        size: 297mm 167.25mm;
         margin: 0;
       }
+
+      *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        animation: none !important;
+        transition: none !important;
+      }
+
       html, body {
-        width: 1920px;
+        width: 297mm;
         height: auto;
+        margin: 0;
+        padding: 0;
         overflow: visible !important;
         background: #07090f !important;
       }
+
       #vp {
         position: relative !important;
         transform: none !important;
-        width: 1920px;
-        height: auto;
+        width: 297mm !important;
+        height: auto !important;
         left: 0 !important;
         top: 0 !important;
+        overflow: visible !important;
       }
+
       .slide {
         position: relative !important;
         display: flex !important;
+        flex-direction: column !important;
         opacity: 1 !important;
-        pointer-events: all !important;
+        pointer-events: none !important;
+        width: 297mm !important;
+        height: 167.25mm !important;
+        overflow: hidden !important;
         page-break-after: always !important;
         break-after: page !important;
-        height: 1080px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        background: #07090f !important;
+        box-sizing: border-box !important;
       }
-      #nav, #snum, #fsbtn, .pdf-btn {
+
+      .slide:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }
+
+      /* Inhalte die in Slides absolut positioniert sind */
+      .slide * {
+        visibility: visible !important;
+      }
+
+      /* UI-Elemente ausblenden */
+      #nav, #snum, #fsbtn, .pdf-btn, .s1-bg {
         display: none !important;
+      }
+
+      /* Hintergründe explizit setzen */
+      .code {
+        background: #0d1422 !important;
+      }
+
+      .prob, .outlook-item {
+        background: #111827 !important;
       }
     }
 
@@ -1926,7 +1967,7 @@
     <section class="slide" id="soled">
       <div class="sh">
         <div class="sh-label">04 — Display</div>
-        <h2>Das sieht der Spieler — 128×64 OLED</h2>
+        <h2>Display-Zustände &amp; UI-Konzept</h2>
       </div>
       <div class="sc"
         style="flex-direction:column;align-items:stretch;padding:10px 80px 28px;justify-content:flex-start">
@@ -2655,6 +2696,76 @@
       </div>
     </section>
 
+    <!-- ========== SLIDE — QUESTIONS JSON ========== -->
+    <section class="slide" id="squestions">
+      <div class="sh">
+        <div class="sh-label">08b — Frageformat</div>
+        <h2>Fragetypen &amp; Datenschema</h2>
+      </div>
+      <div class="sc" style="padding:14px 52px 22px;align-items:stretch">
+        <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:16px;flex:1;min-height:0">
+
+          <!-- mcq -->
+          <div style="background:var(--card);border-radius:12px;padding:18px 22px;border:1px solid var(--border);border-top:3px solid var(--cyan);display:flex;flex-direction:column;gap:10px">
+            <span class="mono" style="font-size:14px;font-weight:700;color:var(--cyan);letter-spacing:1px">mcq — Multiple Choice</span>
+            <div class="code" style="font-size:15px;line-height:1.75;flex:1">
+              <div><span style="color:var(--muted)">{</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"text"</span>: <span class="str">"Idle-Pegel einer UART-Leitung?"</span><span style="color:var(--muted)">,</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"options"</span>: <span style="color:var(--muted)">{</span></div>
+              <div>&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"A"</span>: <span class="str">"LOW"</span>, <span style="color:var(--cyan)">"B"</span>: <span class="str">"HIGH"</span>,</div>
+              <div>&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">"C"</span>: <span class="str">"floating"</span>, <span style="color:var(--cyan)">"D"</span>: <span class="str">"Takt"</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--muted)">},</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"correct"</span>: <span class="str">"B"</span>, <span style="color:var(--cyan)">"time_limit_s"</span>: <span style="color:var(--orange)">20</span></div>
+              <div><span style="color:var(--muted)">}</span></div>
+            </div>
+          </div>
+
+          <!-- estimate -->
+          <div style="background:var(--card);border-radius:12px;padding:18px 22px;border:1px solid var(--border);border-top:3px solid var(--green);display:flex;flex-direction:column;gap:10px">
+            <span class="mono" style="font-size:14px;font-weight:700;color:var(--green);letter-spacing:1px">estimate — Zahlenwert schätzen</span>
+            <div class="code" style="font-size:15px;line-height:1.75;flex:1">
+              <div><span style="color:var(--muted)">{</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"type"</span>: <span class="str">"estimate"</span><span style="color:var(--muted)">,</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"text"</span>: <span class="str">"millis()-Überlauf nach</span></div>
+              <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">wie vielen Tagen?"</span><span style="color:var(--muted)">,</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"min"</span>: <span style="color:var(--orange)">1</span>, <span style="color:var(--cyan)">"max"</span>: <span style="color:var(--orange)">100</span>,</div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"correct"</span>: <span style="color:var(--orange)">50</span>, <span style="color:var(--cyan)">"unit"</span>: <span class="str">"Tage"</span></div>
+              <div><span style="color:var(--muted)">}</span></div>
+            </div>
+          </div>
+
+          <!-- higher_lower -->
+          <div style="background:var(--card);border-radius:12px;padding:18px 22px;border:1px solid var(--border);border-top:3px solid var(--blue);display:flex;flex-direction:column;gap:10px">
+            <span class="mono" style="font-size:14px;font-weight:700;color:var(--blue);letter-spacing:1px">higher_lower — Höher oder niedriger?</span>
+            <div class="code" style="font-size:15px;line-height:1.75;flex:1">
+              <div><span style="color:var(--muted)">{</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"type"</span>: <span class="str">"higher_lower"</span><span style="color:var(--muted)">,</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"text"</span>: <span class="str">"RS485-Reichweite &gt; 100 m?"</span><span style="color:var(--muted)">,</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"reference"</span>: <span style="color:var(--orange)">100</span>,</div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"actual"</span>: <span style="color:var(--orange)">1200</span>,</div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"correct"</span>: <span class="str">"HIGHER"</span>, <span style="color:var(--cyan)">"unit"</span>: <span class="str">"m"</span></div>
+              <div><span style="color:var(--muted)">}</span></div>
+            </div>
+          </div>
+
+          <!-- poti / temp -->
+          <div style="background:var(--card);border-radius:12px;padding:18px 22px;border:1px solid var(--border);border-top:3px solid var(--orange);display:flex;flex-direction:column;gap:10px">
+            <span class="mono" style="font-size:14px;font-weight:700;color:var(--orange);letter-spacing:1px">poti_target / temp_target — Hardware</span>
+            <div class="code" style="font-size:15px;line-height:1.75;flex:1">
+              <div><span style="color:var(--muted)">{</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"type"</span>: <span class="str">"poti_target"</span><span style="color:var(--muted)">,</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"text"</span>: <span class="str">"Poti auf Zielwert einstellen!"</span><span style="color:var(--muted)">,</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"target_range"</span>: [<span style="color:var(--orange)">15</span>, <span style="color:var(--orange)">90</span>], <span class="cmt">// zufällig</span></div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"tolerance"</span>: <span style="color:var(--orange)">5</span>,</div>
+              <div>&nbsp;&nbsp;<span style="color:var(--cyan)">"time_limit_s"</span>: <span style="color:var(--orange)">25</span></div>
+              <div><span style="color:var(--muted)">}</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
     <!-- ========== SLIDE — FRONTEND BEAMER VIEW ========== -->
     <section class="slide" id="sfrontend">
       <div class="sh">
@@ -3345,11 +3456,7 @@
 
     <!-- ========== SLIDE 10 — QUIZ IM BROWSER ========== -->
     <section class="slide" id="s9">
-      <div class="sh">
-        <div class="sh-label">13 — Live-Demo</div>
-        <h2>Das Quiz im Browser</h2>
-      </div>
-      <div class="sc" style="padding:0 60px 20px;flex-direction:column;align-items:stretch;min-height:0">
+      <div class="sc" style="padding:16px 24px 16px;flex-direction:column;align-items:stretch;min-height:0">
         <div
           style="flex:1;min-height:0;border-radius:14px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.5)">
           <!-- Browser chrome -->
@@ -3395,11 +3502,7 @@
 
     <!-- ========== SLIDE 11 — ADMIN PANEL ========== -->
     <section class="slide" id="s9b">
-      <div class="sh">
-        <div class="sh-label">13 — Live-Demo</div>
-        <h2>Das Admin-Panel</h2>
-      </div>
-      <div class="sc" style="padding:0 60px 20px;flex-direction:column;align-items:stretch;min-height:0">
+      <div class="sc" style="padding:16px 24px 16px;flex-direction:column;align-items:stretch;min-height:0">
         <div
           style="flex:1;min-height:0;border-radius:14px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.5)">
           <!-- Browser chrome -->
@@ -3447,44 +3550,53 @@
         <div class="sh-label">14 — Ausblick</div>
         <h2>Was als Nächstes kommen könnte</h2>
       </div>
-      <div class="sc" style="flex-direction:column;align-items:stretch;padding:20px 100px 36px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:20px;flex:1;min-height:0">
-          <div class="outlook-item" style="flex-direction:column;align-items:flex-start;gap:14px;padding:28px 32px">
-            <div class="outlook-icon" style="color:var(--blue);width:auto"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
-              </svg></div>
-            <div>
-              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Persistenz &amp; Highscores</div>
-              <div class="outlook-sub" style="font-size:18px">Datenbank für Spielhistorie, Highscores und Auswertung pro Spieler über mehrere Sessions</div>
+      <div class="sc" style="align-items:center;justify-content:center;padding:28px 72px 40px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%">
+
+          <div style="background:var(--card);border-radius:16px;padding:28px;border:1px solid var(--border);border-top:3px solid var(--blue);display:flex;gap:20px;align-items:flex-start">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(77,142,240,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue)">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:12px;font-weight:700;letter-spacing:2px;color:var(--blue);opacity:.6;font-family:'JetBrains Mono',monospace">01</span>
+              <div style="font-size:22px;font-weight:700;line-height:1.2">Persistenz &amp; Highscores</div>
+              <div style="font-size:17px;color:var(--muted);line-height:1.55">Datenbank für Spielhistorie, Highscores und Auswertung pro Spieler über mehrere Sessions</div>
             </div>
           </div>
-          <div class="outlook-item" style="flex-direction:column;align-items:flex-start;gap:14px;padding:28px 32px">
-            <div class="outlook-icon" style="color:var(--green);width:auto"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg></div>
-            <div>
-              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Fragen-Editor im Admin-Panel</div>
-              <div class="outlook-sub" style="font-size:18px">Fragen direkt im Browser erstellen und bearbeiten statt JSON-Datei manuell zu pflegen</div>
+
+          <div style="background:var(--card);border-radius:16px;padding:28px;border:1px solid var(--border);border-top:3px solid var(--green);display:flex;gap:20px;align-items:flex-start">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(57,211,83,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--green)">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:12px;font-weight:700;letter-spacing:2px;color:var(--green);opacity:.6;font-family:'JetBrains Mono',monospace">02</span>
+              <div style="font-size:22px;font-weight:700;line-height:1.2">Fragen-Editor im Admin-Panel</div>
+              <div style="font-size:17px;color:var(--muted);line-height:1.55">Fragen direkt im Browser erstellen und bearbeiten statt JSON-Datei manuell zu pflegen</div>
             </div>
           </div>
-          <div class="outlook-item" style="flex-direction:column;align-items:flex-start;gap:14px;padding:28px 32px">
-            <div class="outlook-icon" style="color:var(--orange);width:auto"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg></div>
-            <div>
-              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Anti-Cheat</div>
-              <div class="outlook-sub" style="font-size:18px">Mehrfachabstimmung und Zeitmanipulation serverseitig erkennen und verhindern</div>
+
+          <div style="background:var(--card);border-radius:16px;padding:28px;border:1px solid var(--border);border-top:3px solid var(--orange);display:flex;gap:20px;align-items:flex-start">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(255,159,67,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--orange)">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:12px;font-weight:700;letter-spacing:2px;color:var(--orange);opacity:.6;font-family:'JetBrains Mono',monospace">03</span>
+              <div style="font-size:22px;font-weight:700;line-height:1.2">Anti-Cheat</div>
+              <div style="font-size:17px;color:var(--muted);line-height:1.55">Mehrfachabstimmung und Zeitmanipulation serverseitig erkennen und verhindern</div>
             </div>
           </div>
-          <div class="outlook-item" style="flex-direction:column;align-items:flex-start;gap:14px;padding:28px 32px">
-            <div class="outlook-icon" style="color:var(--cyan);width:auto"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-              </svg></div>
-            <div>
-              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Bilderfragen</div>
-              <div class="outlook-sub" style="font-size:18px">Bilder direkt zur Frage auf dem Beamer anzeigen für visuellere Fragetypen</div>
+
+          <div style="background:var(--card);border-radius:16px;padding:28px;border:1px solid var(--border);border-top:3px solid var(--cyan);display:flex;gap:20px;align-items:flex-start">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(0,212,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--cyan)">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:12px;font-weight:700;letter-spacing:2px;color:var(--cyan);opacity:.6;font-family:'JetBrains Mono',monospace">04</span>
+              <div style="font-size:22px;font-weight:700;line-height:1.2">Bilderfragen</div>
+              <div style="font-size:17px;color:var(--muted);line-height:1.55">Bilder direkt zur Frage auf dem Beamer anzeigen für visuellere Fragetypen</div>
             </div>
           </div>
+
         </div>
       </div>
     </section>
@@ -3619,14 +3731,10 @@
 
         </div>
         <div style="display:flex;justify-content:center;margin-top:40px">
-          <button onclick="window.print()" class="pdf-btn" style="display:flex;align-items:center;gap:10px;padding:12px 24px;background:var(--surface2);border:1px solid var(--blue);border-radius:10px;font-family:'Inter',sans-serif;font-size:20px;color:var(--text);cursor:pointer;transition:all 0.2s">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            PDF-Version generieren (Drucken)
-          </button>
+          <div style="padding:14px 28px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:17px;color:var(--muted);text-align:center;line-height:1.8">
+            PDF exportieren:<br>
+            <span style="color:var(--cyan)">python3 docs/präsentation/export_pdf.py</span>
+          </div>
         </div>
       </div>
     </section>
@@ -3648,7 +3756,7 @@
 
   <script>
     (function () {
-      const TOTAL = 22;
+      const TOTAL = 25;
       let cur = 0;
 
       // ── build dot nav ──

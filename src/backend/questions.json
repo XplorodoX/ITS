@@ -1,134 +1,131 @@
 [
   {
-    "text": "In welchem WLAN-Hotspot-Netzwerk müssen sich die AALeC-Clients und der Mac anmelden?",
-    "options": { "A": "AALeC-Quiz", "B": "AALeC-Home", "C": "ITS-Aalen", "D": "WLAN-Foyer" },
-    "correct": "A",
-    "time_limit_s": 20
-  },
-  {
-    "text": "Welcher Programmbereich in einem Arduino-Sketch wird genau einmal beim Starten des Controllers ausgeführt?",
+    "text": "Welcher Programmbereich in einem Arduino-Sketch wird genau einmal beim Starten ausgeführt?",
     "options": { "A": "loop()", "B": "init()", "C": "setup()", "D": "main()" },
     "correct": "C",
     "time_limit_s": 20
   },
   {
-    "text": "Was ist das Hauptmerkmal des 'Superloop'-Modells (Arduino standard loop)?",
-    "options": {
-      "A": "Es teilt Aufgaben automatisch auf mehrere CPU-Kerne auf",
-      "B": "Es wird durch ein integriertes Echtzeit-Betriebssystem (RTOS) verwaltet",
-      "C": "Es reagiert ausschließlich auf hardwarebasierte Interrupts",
-      "D": "Es führt Aufgaben sequenziell in einer Endlosschleife aus"
-    },
+    "text": "Welche Spannung gibt ein ESP8266-GPIO im HIGH-Zustand aus?",
+    "options": { "A": "5V", "B": "12V", "C": "1.8V", "D": "3.3V" },
     "correct": "D",
     "time_limit_s": 20
   },
   {
-    "text": "Wie viele Leitungen werden für eine bidirektionale serielle UART-Kommunikation (ohne CTS/RTS und Masse) mindestens benötigt?",
+    "text": "Welche Signalart hat laut Vorlesung kontinuierliche Spannungswerte statt diskreter Zustände?",
     "options": {
-      "A": "1 Leitung",
-      "B": "2 Leitungen (TX und RX)",
-      "C": "4 Leitungen",
-      "D": "8 Leitungen"
-    },
-    "correct": "B",
-    "time_limit_s": 20
-  },
-  {
-    "text": "Welche Sensor-Schnittstelle nutzt typischerweise ein Dehnungsmessstreifen in einer Brückenschaltung zur Temperaturkompensation und Erhöhung der Empfindlichkeit?",
-    "options": {
-      "A": "Wheatstone-Brücke",
-      "B": "Maxwell-Brücke",
-      "C": "Wien-Brücke",
-      "D": "Colpitts-Oszillator"
-    },
-    "correct": "A",
-    "time_limit_s": 20
-  },
-  {
-    "text": "Was passiert beim ESP8266, wenn eine blockierende Funktion (z.B. delay()) länger als ein paar Sekunden läuft, ohne dass yield() oder delay() aufgerufen wird?",
-    "options": {
-      "A": "Das WLAN-Teilsystem sendet Daten mit reduzierter Rate",
-      "B": "Der Speicher läuft voll (Out of Memory)",
-      "C": "Der Hardware-Watchdog-Timer (WDT) löst einen Reset aus",
-      "D": "Nichts, der ESP8266 läuft normal weiter"
+      "A": "Digital",
+      "B": "PWM",
+      "C": "Analog",
+      "D": "UART"
     },
     "correct": "C",
     "time_limit_s": 20
   },
   {
-    "text": "Was unterscheidet ein Thermoelement (Thermocouple) von einem NTC-Widerstand?",
+    "text": "Welche zwei Leitungen verwendet der I2C-Bus für die Kommunikation?",
     "options": {
-      "A": "Ein Thermoelement benötigt eine externe Versorgungsspannung",
-      "B": "Ein Thermoelement arbeitet nur im Temperaturbereich unter 0°C",
-      "C": "Es gibt keinen Unterschied, beide messen den Widerstand",
-      "D": "Ein Thermoelement erzeugt eine temperaturabhängige elektrische Spannung (Seebeck-Effekt)"
+      "A": "TX und RX",
+      "B": "MOSI und MISO",
+      "C": "SDA und SCL",
+      "D": "A+ und A−"
     },
-    "correct": "D",
+    "correct": "C",
     "time_limit_s": 20
   },
   {
-    "text": "Welcher I2C-Modus hat eine maximale Übertragungsgeschwindigkeit (Standard Mode)?",
+    "text": "Was versteht man unter einem 'Digitalen Zwilling'?",
     "options": {
-      "A": "10 kbit/s",
-      "B": "100 kbit/s",
-      "C": "400 kbit/s",
-      "D": "1 Mbit/s"
+      "A": "Ein zweiter identischer Mikrocontroller als Redundanz",
+      "B": "Eine Backup-Kopie aller Sensordaten",
+      "C": "Die digitale Abbildung einer physischen Anlage zur Simulation und Überwachung",
+      "D": "Ein gespiegelter Server für Echtzeitmessungen"
+    },
+    "correct": "C",
+    "time_limit_s": 20
+  },
+  {
+    "text": "Was ist laut Vorlesung die Definition eines Sensors?",
+    "options": {
+      "A": "Ein Gerät das elektrische Signale in physikalische Größen umwandelt",
+      "B": "Ein Bauteil das physikalische Größen in elektrische Signale wandelt",
+      "C": "Ein Mikrocontroller mit integrierter WLAN-Schnittstelle",
+      "D": "Eine Software-Komponente zur Datenverarbeitung"
     },
     "correct": "B",
     "time_limit_s": 20
   },
   {
-    "type": "higher_lower",
-    "text": "Ist die Standard-Baudrate von 115200 Baud höher oder niedriger als die historische serielle Baudrate von 9600 Baud?",
-    "reference": 9600,
-    "actual": 115200,
-    "correct": "HIGHER",
-    "unit": "Baud",
+    "text": "Welchen Pegel hat eine UART-Leitung im Ruhezustand (Idle)?",
+    "options": {
+      "A": "LOW (0V)",
+      "B": "Hochohmig (floating)",
+      "C": "Wechselnde Impulse als Taktsignal",
+      "D": "HIGH"
+    },
+    "correct": "D",
+    "time_limit_s": 20
+  },
+  {
+    "text": "Was passiert mit dem Widerstand eines NTC-Sensors bei steigender Temperatur?",
+    "options": {
+      "A": "Er steigt linear an",
+      "B": "Er bleibt konstant",
+      "C": "Er sinkt",
+      "D": "Er schwankt unregelmäßig"
+    },
+    "correct": "C",
+    "time_limit_s": 20
+  },
+  {
+    "text": "Was macht RS485 robuster gegen Störungen als RS232?",
+    "options": {
+      "A": "RS485 überträgt mit deutlich höheren Spannungen",
+      "B": "RS485 nutzt differentielle Übertragung — gleiche Störungen auf beiden Leitungen heben sich auf",
+      "C": "RS485 hat ein separates Taktsignal",
+      "D": "RS485 verschlüsselt die Datenbits"
+    },
+    "correct": "B",
+    "time_limit_s": 20
+  },
+  {
+    "text": "Beim Schrittmotor mit STEP/DIR-Steuerung: Was bestimmt die Rotationsgeschwindigkeit?",
+    "options": {
+      "A": "Die Spannung am DIR-Pin",
+      "B": "Die Amplitude des STEP-Signals",
+      "C": "Die Frequenz der STEP-Impulse",
+      "D": "Der Widerstand der Motorwicklungen"
+    },
+    "correct": "C",
+    "time_limit_s": 20
+  },
+  {
+    "text": "Was ist das Ziel des Pick-by-Light Systems in der Montage?",
+    "options": {
+      "A": "Automatische Lagerhaltung per Roboter",
+      "B": "RFID-basierte Identifikation von Fertigungsteilen",
+      "C": "Gewichtskontrolle von Bauteilen per Waage",
+      "D": "Reduktion von Montagefehlern durch visuelle Lichtsignale am Arbeitsplatz"
+    },
+    "correct": "D",
     "time_limit_s": 20
   },
   {
     "type": "higher_lower",
-    "text": "Hat das I2C-EEPROM AT24C256 mit 256 Kbit Speicherkapazität eine höhere oder niedrigere Kapazität als 30 Kilobyte?",
-    "reference": 30,
-    "actual": 32,
+    "text": "Hat die maximale Reichweite von RS485 (bis zu 1200 m) eine größere oder kleinere Reichweite als 100 m?",
+    "reference": 100,
+    "actual": 1200,
     "correct": "HIGHER",
-    "unit": "KB",
-    "time_limit_s": 20
-  },
-  {
-    "type": "higher_lower",
-    "text": "Ist die Signalstärke (RSSI) einer sehr guten WLAN-Verbindung mit -50 dBm höher oder niedriger als die Grenze von -75 dBm?",
-    "reference": -75,
-    "actual": -50,
-    "correct": "HIGHER",
-    "unit": "dBm",
+    "unit": "m",
     "time_limit_s": 20
   },
   {
     "type": "estimate",
-    "text": "Welche Speichergröße hat das EEPROM des AT24C256 Bausteins laut Vorlesung und Datenblatt in Kilobit (Kbit)?",
-    "min": 0,
-    "max": 1000,
-    "correct": 256,
-    "unit": "Kbit",
-    "time_limit_s": 30
-  },
-  {
-    "type": "estimate",
-    "text": "Wie viele Millisekunden entsprechen einem typischen Watchdog-Timeout (Software WDT) auf dem ESP8266, bevor dieser auslöst?",
-    "min": 100,
-    "max": 10000,
-    "correct": 3200,
-    "unit": "ms",
-    "time_limit_s": 30
-  },
-  {
-    "type": "estimate",
-    "text": "Nach wie vielen Tagen läuft der standardmäßige `millis()`-Zähler (32-Bit) im Arduino-Framework ungefähr über? (Ganzzahlig runden)",
-    "min": 1,
-    "max": 100,
-    "correct": 50,
-    "unit": "Tage",
+    "text": "Wie viele Geräte können typischerweise maximal an einem RS485-Bus angeschlossen werden?",
+    "min": 2,
+    "max": 200,
+    "correct": 32,
+    "unit": "Geräte",
     "time_limit_s": 30
   },
   {
@@ -139,24 +136,10 @@
     "time_limit_s": 25
   },
   {
-    "type": "poti_target",
-    "text": "Poti-Challenge (Profi): Diesmal mit weniger Toleranz — triff den Zielwert möglichst genau!",
-    "target_range": [15, 90],
-    "tolerance": 3,
-    "time_limit_s": 25
-  },
-  {
     "type": "temp_target",
     "text": "Temperatur-Challenge: Bringe den Sensor durch Anfassen, Anhauchen oder Pusten auf die angezeigte Zieltemperatur!",
     "target_range": [19.0, 31.0],
     "tolerance": 1.0,
-    "time_limit_s": 45
-  },
-  {
-    "type": "temp_target",
-    "text": "Temperatur-Challenge (Profi): Halte den Sensor möglichst exakt auf der Zieltemperatur — kleinere Toleranz!",
-    "target_range": [19.0, 31.0],
-    "tolerance": 0.7,
     "time_limit_s": 45
   }
 ]

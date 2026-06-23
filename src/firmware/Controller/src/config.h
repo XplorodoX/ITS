@@ -1,0 +1,15 @@
+#pragma once
+
+// WiFi-Zugangsdaten
+#define WIFI_SSID     "AALeC-Quiz"
+#define WIFI_PASSWORD "12345678"
+
+// MQTT-Broker — Hostname (mDNS) statt IP empfohlen, dann ist die IP egal
+// Hostname des Broker-PCs: Terminal → "scutil --get LocalHostName" → + ".local"
+#define MQTT_BROKER   "MacBook-Pro-von-Florian.local"
+#define MQTT_PORT     1883
+
+// Optional fuer AP-Host-Modus: fester Broker-Wert (meist IP des Mac im AALeC-AP)
+// Beispiel: Wenn Mac im AALeC-AP haengt, ist es oft 192.168.4.2
+// Leer lassen, um stattdessen MQTT_BROKER zu verwenden.
+#define MQTT_BROKER_AP ""

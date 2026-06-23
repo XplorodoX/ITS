@@ -53,8 +53,6 @@ jobs:
       - name: Build Firmware (Controller ESP8266)
         run: |
           cd src/firmware/Controller
-          # Copy config.h.example to config.h if config.h is missing (needed for CI compilation)
-          cp -n src/config.h.example src/config.h || true
           pio run
 
       - name: Upload Controller Binary

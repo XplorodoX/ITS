@@ -76,6 +76,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 
   if (t == "quiz/name/set/" + deviceId) {
+    // Retained Messages vom Broker kommen sofort beim Subscriben an — noch bevor
+    // der Server unseren connect bestätigt hat (registeredByServer == false).
+    // In diesem Fall ignorieren wir den gespeicherten Namen: der selbst eingegebene
+    // bzw. im EEPROM gespeicherte Name hat Vorrang. Nur explizite Admin-Renames
+    // (die nach dem ACK ankommen) werden übernommen.
+    if (!registeredByServer) {
+      Serial.println("[NAME] quiz/name/set ignoriert (retained, noch nicht registriert)");
+      return;
+    }
+
     const char* src = doc["name"] | "";
     if (strlen(src) == 0) return;
 

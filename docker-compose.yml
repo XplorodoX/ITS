@@ -20,6 +20,8 @@ services:
     depends_on:
       mosquitto:
         condition: service_healthy
+    volumes:
+      - ./src/backend/questions.json:/app/questions.json:ro
     environment:
       - BROKER=${BROKER:-mosquitto}
       - QUESTIONS=${QUESTIONS:-questions.json}

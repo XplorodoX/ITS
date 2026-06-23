@@ -1123,6 +1123,51 @@
       animation-duration: 0.001ms !important;
       animation-delay: 0s !important;
     }
+
+    /* ============================
+   SLIDE AGENDA
+   ============================ */
+    .agenda-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px 40px;
+      width: 100%
+    }
+
+    .agenda-item {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      padding: 22px 28px;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      opacity: 0
+    }
+
+    .agenda-item.go {
+      animation: fadeUp .45s ease forwards
+    }
+
+    .agenda-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--blue);
+      width: 36px;
+      flex-shrink: 0
+    }
+
+    .agenda-label {
+      font-size: 25px;
+      font-weight: 500
+    }
+
+    .agenda-sub {
+      font-size: 18px;
+      color: var(--muted);
+      margin-top: 3px
+    }
   </style>
 </head>
 
@@ -1397,6 +1442,81 @@
           <div class="col" style="gap:6px">
             <span class="s1-author">Florian Merlau</span>
             <span class="s1-meta">81775</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SLIDE — AGENDA ========== -->
+    <section class="slide" id="sagenda">
+      <div class="sh">
+        <div class="sh-label">Agenda</div>
+        <h2>Gliederung</h2>
+      </div>
+      <div class="sc">
+        <div class="agenda-grid">
+          <div class="agenda-item">
+            <span class="agenda-num">01</span>
+            <div>
+              <div class="agenda-label">Motivation &amp; Projektidee</div>
+              <div class="agenda-sub">Problemstellung &amp; Anwendungsfall</div>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">02</span>
+            <div>
+              <div class="agenda-label">Systemarchitektur</div>
+              <div class="agenda-sub">Vom Controller bis zum Beamer</div>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">03</span>
+            <div>
+              <div class="agenda-label">Hardware</div>
+              <div class="agenda-sub">AALeC-V3 · Schnittstellen · Display</div>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">04</span>
+            <div>
+              <div class="agenda-label">Software-Architektur</div>
+              <div class="agenda-sub">Firmware · Backend · Frontend</div>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">05</span>
+            <div>
+              <div class="agenda-label">MQTT &amp; Netzwerk</div>
+              <div class="agenda-sub">Broker · Topics · WebSocket</div>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">06</span>
+            <div>
+              <div class="agenda-label">Backend &amp; State Machine</div>
+              <div class="agenda-sub">Game Master · Fragetypen · Scoring</div>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">07</span>
+            <div>
+              <div class="agenda-label">Frontend</div>
+              <div class="agenda-sub">Beamer-Ansicht · Admin Panel</div>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">08</span>
+            <div>
+              <div class="agenda-label">Herausforderungen</div>
+              <div class="agenda-sub">Probleme &amp; Lösungen</div>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-num">09</span>
+            <div>
+              <div class="agenda-label">Demo &amp; Ausblick</div>
+              <div class="agenda-sub">Live-Demo · CI/CD · Weiterentwicklung</div>
+            </div>
           </div>
         </div>
       </div>
@@ -3755,7 +3875,7 @@
 
   <script>
     (function () {
-      const TOTAL = 25;
+      const TOTAL = 26;
       let cur = 0;
 
       // ── build dot nav ──
@@ -3829,8 +3949,8 @@
         // slide number
         document.getElementById('snum').textContent = (cur + 1) + ' / ' + TOTAL;
 
-        // state machine on slide sbackend (index 9)
-        if (cur === 9) {
+        // state machine on slide sbackend (index 11)
+        if (cur === 11) {
           smIdx = 0;
           clearInterval(smTimer);
           animateSM();
@@ -3839,8 +3959,8 @@
           clearInterval(smTimer);
         }
 
-        // animate mqtt topics on slide s8 (index 7)
-        if (cur === 7) {
+        // animate mqtt topics on slide s8 (index 9)
+        if (cur === 9) {
           document.querySelectorAll('.mqtt-topic').forEach((el, i) => {
             el.classList.remove('go');
             el.style.animationDelay = (i * .08) + 's';
@@ -3863,6 +3983,8 @@
         slide.querySelectorAll('.outlook-item').forEach(el => { el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); });
         // qcards
         slide.querySelectorAll('.qcard').forEach(el => { el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); });
+        // agenda items
+        slide.querySelectorAll('.agenda-item').forEach((el, i) => { el.classList.remove('go'); el.style.animationDelay = (i * .07) + 's'; void el.offsetWidth; el.classList.add('go'); });
       }
 
       // initial

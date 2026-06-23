@@ -131,6 +131,7 @@
   {
     "type": "poti_target",
     "text": "Poti-Challenge: Stelle den Regler so genau wie möglich auf den angezeigten Zielwert ein — nur nach Gefühl, die aktuelle Position bleibt verdeckt!",
+    "target": 50,
     "target_range": [15, 90],
     "tolerance": 5,
     "time_limit_s": 25
@@ -138,6 +139,7 @@
   {
     "type": "temp_target",
     "text": "Temperatur-Challenge: Bringe den Sensor durch Anfassen, Anhauchen oder Pusten auf die angezeigte Zieltemperatur!",
+    "target": 25.0,
     "target_range": [19.0, 31.0],
     "tolerance": 1.0,
     "time_limit_s": 45

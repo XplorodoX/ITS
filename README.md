@@ -120,6 +120,102 @@ podman-compose restart game-master
 
 ---
 
+## REST API
+
+Der Game Master stellt eine REST-API auf Port **8080** bereit. Alle Endpunkte geben JSON zurück und akzeptieren CORS von beliebigen Origins.
+
+### `GET /api/question-sets`
+
+Gibt alle verfügbaren Fragensets im Backend-Verzeichnis zurück.
+
+```json
+[
+  { "name": "questions", "count": 15, "active": true },
+  { "name": "advanced",  "count":  8, "active": false }
+]
+```
+
+### `GET /api/question-sets/<name>`
+
+Liest ein einzelnes Fragenset als JSON-Array.
+
+### `PUT /api/question-sets/<name>`
+
+Erstellt oder überschreibt ein Fragenset. Body muss ein JSON-Array von Fragen sein.  
+Validierungsfehler werden mit `422` und `{ "errors": [...] }` zurückgegeben.  
+Name darf nur `[A-Za-z0-9_-]` enthalten.
+
+```bash
+curl -X PUT http://localhost:8080/api/question-sets/meinset \
+  -H "Content-Type: application/json" \
+  -d '[{"text":"...", "options":{"A":"...","B":"...","C":"...","D":"..."}, "correct":"A", "time_limit_s":20}]'
+```
+
+### `DELETE /api/question-sets/<name>`
+
+Löscht ein Fragenset. Schlägt mit `409` fehl wenn das Set gerade aktiv ist.
+
+### `GET /api/active-set`
+
+Gibt das aktuell geladene Fragenset zurück.
+
+```json
+{ "active": "questions" }
+```
+
+### `POST /api/active-set`
+
+Wechselt das aktive Fragenset (nur im Zustand `WAITING` möglich).
+
+```bash
+curl -X POST http://localhost:8080/api/active-set \
+  -H "Content-Type: application/json" \
+  -d '{"name": "advanced"}'
+```
+
+---
+
+## WebSocket / MQTT
+
+Das Frontend verbindet sich direkt per **WebSocket auf Port 9001** mit dem Mosquitto-Broker — kein eigener WebSocket-Server nötig. Mosquitto spricht MQTT nativ über WebSocket.
+
+```
+Browser  ──WS:9001──►  Mosquitto  ◄──TCP:1883──  Backend / Controller
+```
+
+### Topics (Broker → Frontend)
+
+| Topic | Inhalt |
+|---|---|
+| `quiz/state` | Spielzustand (`WAITING` / `QUESTION` / `VOTING` / `REVEAL` / `SCORES` / `ENDED`), `question_id`, `remaining_s` |
+| `quiz/question` | Aktuelle Frage inkl. Typ, Text, Optionen, Zeitlimit |
+| `quiz/reveal` | Richtige Antwort, Antwortverteilung, Einzelergebnisse |
+| `quiz/scores` | Aktuelles Leaderboard (`device_id`, `name`, `score`, `streak`) |
+| `quiz/answer_count` | Live-Zähler: wie viele haben bereits geantwortet (`count` / `total`) |
+| `quiz/players` | Spielerliste mit Online-Status für die Lobby |
+
+### Topics (Frontend → Broker)
+
+| Topic | Payload | Funktion |
+|---|---|---|
+| `quiz/control` | `{"action": "start"}` | Quiz starten |
+| `quiz/control` | `{"action": "restart"}` | Zurück zur Lobby, Punkte reset |
+| `quiz/control` | `{"action": "end"}` | Quiz vorzeitig beenden |
+| `quiz/control` | `{"action": "reset_names"}` | Namenswahl aller Controller zurücksetzen |
+| `quiz/rename/set` | `{"device_id": "...", "name": "..."}` | Gerät umbenennen |
+| `quiz/remove/set` | `{"device_id": "..."}` | Gerät aus Spielerliste entfernen |
+
+### Verbindung aus eigenem Code
+
+```js
+import mqtt from 'mqtt';
+const client = mqtt.connect('ws://localhost:9001');
+client.on('connect', () => client.subscribe(['quiz/state', 'quiz/scores']));
+client.on('message', (topic, payload) => console.log(topic, JSON.parse(payload)));
+```
+
+---
+
 ## Lokale Entwicklung
 
 ```bash

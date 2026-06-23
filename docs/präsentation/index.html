@@ -889,8 +889,8 @@
     /* OLED display slide */
     .oledGrid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px 20px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px 16px;
       width: 100%
     }
 
@@ -1360,7 +1360,7 @@
     <section class="slide" id="s2">
       <div class="sh">
         <div class="sh-label">01 — Motivation</div>
-        <h2>Was wir wollten — und warum AALeC</h2>
+        <h2>Projektidee &amp; Anwendungsfall</h2>
       </div>
       <div class="sc" style="padding-top:28px">
         <div class="col" style="gap:48px;max-width:1400px;width:100%">
@@ -1372,9 +1372,7 @@
                 <polyline points="8 21 12 17 16 21" />
                 <line x1="2" y1="10" x2="22" y2="10" />
               </svg></div>
-            <p><span class="bold" style="color:var(--blue)">Technisch einfach mal ausprobieren</span><br>Wir wollten
-              einen vollständigen Stack selbst bauen — von Embedded-Firmware über MQTT bis zur Web-UI — und dabei
-              wirklich verstehen wie die Teile zusammenspielen.</p>
+            <p><span class="bold" style="color:var(--blue)">Problem: Wissensabfragen in Vorlesungen sind umständlich</span><br>Papierzettel, Handzeichen oder Online-Tools — schnelle, spontane Tests mit allen gleichzeitig sind in der Praxis aufwändig.</p>
           </div>
           <div class="s2-point">
             <div class="s2-icon" style="background:rgba(37,209,110,.15);color:var(--green)"><svg viewBox="0 0 24 24"
@@ -1385,9 +1383,7 @@
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg></div>
-            <p><span class="bold" style="color:var(--green)">AALeC liegt herum — wir bauen was Sinnvolles
-                damit</span><br>Die Hardware ist vorhanden, wurde aber noch nie in einem echten Multiplayer-Szenario
-              eingesetzt. Wir wollten das ändern.</p>
+            <p><span class="bold" style="color:var(--green)">Anwendungsfall: interaktives Lernen</span><br>Wissensabfragen und kleine Tests direkt in der Vorlesung, alle Teilnehmer antworten gleichzeitig mit ihrem Board.</p>
           </div>
           <div class="s2-point">
             <div class="s2-icon" style="background:rgba(245,167,51,.15);color:var(--orange)"><svg viewBox="0 0 24 24"
@@ -1395,9 +1391,7 @@
                 stroke-linejoin="round">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg></div>
-            <p><span class="bold" style="color:var(--orange)">Live-Test mit euch — mehr als 2 AALeC
-                gleichzeitig</span><br>Das Ziel war von Anfang an: am Ende der Vorlesung gemeinsam ein Multiplayer-Quiz
-              spielen — mit echten Controllern, echten Spielern, echtem Spaß.</p>
+            <p><span class="bold" style="color:var(--orange)">Ziel: ein vollständiger eigener Stack</span><br>Firmware, Kommunikation und Web-UI selbst gebaut, von Embedded bis Browser.</p>
           </div>
         </div>
       </div>
@@ -1883,66 +1877,47 @@
     <!-- ========== SLIDE 4b — WIRING & INTERFACES ========== -->
     <section class="slide" id="swiring">
       <div class="sh">
-        <div class="sh-label">03b — Verkabelung &amp; Schnittstellen</div>
-        <h2>GPIO-Belegung &amp; Hardware-Schnittstellen</h2>
+        <div class="sh-label">03b — Schnittstellen</div>
+        <h2>GPIO-Belegungsplan</h2>
       </div>
       <div class="sc" style="padding-top:20px;align-items:start">
-        <div class="g2" style="gap:60px;width:100%;align-items:start">
-          <!-- Left: GPIO Table -->
-          <div>
-            <table style="width:100%">
-              <thead>
-                <tr>
-                  <th>GPIO</th>
-                  <th>Pin-Name</th>
-                  <th>Hardware-Komponente &amp; Funktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td><span class="mono" style="color:var(--orange)">GPIO 0</span></td><td><span class="mono" style="color:var(--muted)">D3</span></td><td>Taster (Encoder-Knopf) &rarr; Antwort bestätigen</td></tr>
-                <tr><td><span class="mono" style="color:var(--purple)">GPIO 2</span></td><td><span class="mono" style="color:var(--muted)">D4</span></td><td>WS2812B RGB-LED-Streifen (Status &amp; Feedback)</td></tr>
-                <tr><td><span class="mono" style="color:var(--cyan)">GPIO 4</span></td><td><span class="mono" style="color:var(--muted)">D2</span></td><td>I²C SDA &rarr; OLED-Display (Datensignal)</td></tr>
-                <tr><td><span class="mono" style="color:var(--cyan)">GPIO 5</span></td><td><span class="mono" style="color:var(--muted)">D1</span></td><td>I²C SCL &rarr; OLED-Display (Taktsignal)</td></tr>
-                <tr><td><span class="mono" style="color:var(--green)">GPIO 12</span></td><td><span class="mono" style="color:var(--muted)">D6</span></td><td>Rotary Encoder Kanal A (Auswahl scrollen)</td></tr>
-                <tr><td><span class="mono" style="color:var(--green)">GPIO 14</span></td><td><span class="mono" style="color:var(--muted)">D5</span></td><td>Rotary Encoder Kanal B (Auswahl scrollen)</td></tr>
-                <tr><td><span class="mono" style="color:var(--red)">GPIO 15</span></td><td><span class="mono" style="color:var(--muted)">D8</span></td><td>Piezo-Beeper &rarr; Sound-Feedback (PWM)</td></tr>
-                <tr><td><span class="mono" style="color:var(--blue)">A0 (ADC)</span></td><td><span class="mono" style="color:var(--muted)">A0</span></td><td>Potentiometer (Eingabe für Challenges / Schätzen)</td></tr>
-              </tbody>
-            </table>
-          </div>
-          
-          <!-- Right: Schnittstellen-Karten -->
-          <div class="col" style="gap:20px">
-            <!-- Card 1 -->
-            <div class="card" style="display:flex;flex-direction:column;gap:10px;padding:24px 28px">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span class="pill pill-cyan" style="font-size:16px;padding:4px 12px">I²C-Bus</span>
-                <span class="mono" style="font-size:15px;color:var(--muted)">Adresse 0x3C</span>
-              </div>
-              <p style="font-size:20px;font-weight:600;margin-top:6px">OLED SH1106 Display &amp; BME680 Sensor</p>
-              <p style="font-size:17px;color:var(--muted);line-height:1.5">Der 2-Draht-Bus spart Pins. Das Display wird kontinuierlich im Loop aktualisiert. Der BME680 misst Temperatur für die Sensor-Challenge.</p>
-            </div>
+        <div class="g2" style="gap:60px;align-items:start;width:100%">
 
-            <!-- Card 2 -->
-            <div class="card" style="display:flex;flex-direction:column;gap:10px;padding:24px 28px">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span class="pill pill-blue" style="font-size:16px;padding:4px 12px">Analoger Eingang (ADC)</span>
-                <span class="mono" style="font-size:15px;color:var(--muted)">10-Bit (0-1023)</span>
-              </div>
-              <p style="font-size:20px;font-weight:600;margin-top:6px">Potentiometer-Erfassung</p>
-              <p style="font-size:17px;color:var(--muted);line-height:1.5">Der ESP8266 besitzt nur einen ADC-Pin. Dieser erfasst den Spannungsabgriff des Drehreglers zur kontinuierlichen Positionserkennung bei Schätzfragen.</p>
-            </div>
+          <table>
+            <thead>
+              <tr>
+                <th>GPIO</th>
+                <th>Pin-Name</th>
+                <th>Komponente &amp; Funktion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="mono" style="color:var(--orange)">GPIO 0</span></td><td><span class="mono" style="color:var(--muted)">D3</span></td><td>Taster &rarr; Antwort bestätigen</td></tr>
+              <tr><td><span class="mono" style="color:var(--purple)">GPIO 2</span></td><td><span class="mono" style="color:var(--muted)">D4</span></td><td>WS2812B RGB-LEDs</td></tr>
+              <tr><td><span class="mono" style="color:var(--cyan)">GPIO 4</span></td><td><span class="mono" style="color:var(--muted)">D2</span></td><td>I²C SDA &rarr; OLED</td></tr>
+              <tr><td><span class="mono" style="color:var(--cyan)">GPIO 5</span></td><td><span class="mono" style="color:var(--muted)">D1</span></td><td>I²C SCL &rarr; OLED</td></tr>
+              <tr><td><span class="mono" style="color:var(--green)">GPIO 12</span></td><td><span class="mono" style="color:var(--muted)">D6</span></td><td>Rotary Encoder Kanal A</td></tr>
+              <tr><td><span class="mono" style="color:var(--green)">GPIO 14</span></td><td><span class="mono" style="color:var(--muted)">D5</span></td><td>Rotary Encoder Kanal B</td></tr>
+              <tr><td><span class="mono" style="color:var(--red)">GPIO 15</span></td><td><span class="mono" style="color:var(--muted)">D8</span></td><td>Piezo-Beeper (PWM)</td></tr>
+              <tr><td><span class="mono" style="color:var(--blue)">A0 (ADC)</span></td><td><span class="mono" style="color:var(--muted)">A0</span></td><td>Potentiometer (10-Bit)</td></tr>
+            </tbody>
+          </table>
 
-            <!-- Card 3 -->
-            <div class="card" style="display:flex;flex-direction:column;gap:10px;padding:24px 28px">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span class="pill pill-green" style="font-size:16px;padding:4px 12px">Digitale GPIOs</span>
-                <span class="mono" style="font-size:15px;color:var(--muted)">Interrupts &amp; PWM</span>
-              </div>
-              <p style="font-size:20px;font-weight:600;margin-top:6px">Eingabetasten &amp; Signalausgabe</p>
-              <p style="font-size:17px;color:var(--muted);line-height:1.5">Der Rotary Encoder wird per Hardware-Interrupts ausgewertet, um Drehungen verzögerungsfrei zu erkennen. Der Beeper wird mit Frequenz-PWM moduliert.</p>
+          <div class="col" style="gap:28px">
+            <div class="col" style="gap:10px">
+              <div style="font-size:19px;font-weight:600;color:var(--cyan)">I²C</div>
+              <div style="font-size:18px;color:var(--muted);line-height:1.7">2-Draht-Bus (SDA + SCL)<br>OLED SH1106 · Adresse 0x3C<br>BME680 Sensor · Adresse 0x76</div>
+            </div>
+            <div class="col" style="gap:10px">
+              <div style="font-size:19px;font-weight:600;color:var(--blue)">ADC</div>
+              <div style="font-size:18px;color:var(--muted);line-height:1.7">Einziger Analogeingang des ESP8266<br>10-Bit Auflösung (0–1023)<br>Liest Poti-Position für Schätzfragen</div>
+            </div>
+            <div class="col" style="gap:10px">
+              <div style="font-size:19px;font-weight:600;color:var(--green)">Digitale GPIOs</div>
+              <div style="font-size:18px;color:var(--muted);line-height:1.7">Encoder per Hardware-Interrupt<br>Beeper per PWM-Frequenz<br>LEDs per WS2812B-Protokoll (1-Wire)</div>
             </div>
           </div>
+
         </div>
       </div>
     </section>
@@ -1980,25 +1955,25 @@
                 <rect x="0" y="12" width="128" height="1" class="px" /><text x="64" y="30" class="pxc" font-size="13"
                   text-anchor="middle" font-family="Arial,sans-serif">Verbunden!</text><text x="64" y="46" class="px"
                   font-size="9" text-anchor="middle" font-family="Arial,sans-serif">192.168.4.7</text><text x="2" y="61"
-                  class="px" font-size="8" text-anchor="start" font-family="Arial,sans-serif">[CLIENT]</text>
               </svg></div>
             <div class="oledLabel"><b>Verbunden</b> · WLAN steht</div>
           </div>
 
+          <!-- Namenseingabe -->
           <div class="oledCell">
             <div class="oledFrame"><svg viewBox="0 0 128 64" xmlns="http://www.w3.org/2000/svg"
                 shape-rendering="crispEdges">
-                <rect x="0" y="0" width="128" height="64" fill="#05070c" /><text x="64" y="9" class="px" font-size="9"
-                  text-anchor="middle" font-family="Arial,sans-serif">AALeC Quiz</text>
-                <rect x="0" y="12" width="128" height="1" class="px" /><text x="64" y="28" class="pxw" font-size="13"
-                  text-anchor="middle" font-family="Arial,sans-serif">Hosting!</text><text x="64" y="42" class="px"
-                  font-size="9" text-anchor="middle" font-family="Arial,sans-serif">AALeC-Quiz</text><text x="64" y="52"
-                  class="px" font-size="9" text-anchor="middle" font-family="Arial,sans-serif">192.168.4.1</text><text
-                  x="2" y="61" class="px" font-size="8" text-anchor="start" font-family="Arial,sans-serif">[HOST]</text>
+                <rect x="0" y="0" width="128" height="64" fill="#05070c" />
+                <text x="64" y="9" class="pxc" font-size="9" text-anchor="middle" font-family="Arial,sans-serif">Name eingeben (5)</text>
+                <rect x="0" y="12" width="128" height="1" class="px" />
+                <text x="64" y="36" class="px" font-size="20" text-anchor="middle" font-family="Arial,sans-serif">AALEC</text>
+                <rect x="34" y="46" width="10" height="2" class="px" />
+                <text x="64" y="58" class="px" font-size="7" text-anchor="middle" font-family="Arial,sans-serif">Dreh=Zeichen  Taste=Weiter</text>
               </svg></div>
-            <div class="oledLabel"><b>Hosting</b> · Board ist selbst AP</div>
+            <div class="oledLabel"><b>Namenseingabe</b> · Buchstaben per Drehknopf</div>
           </div>
 
+          <!-- Bereit / Lobby -->
           <div class="oledCell">
             <div class="oledFrame"><svg viewBox="0 0 128 64" xmlns="http://www.w3.org/2000/svg"
                 shape-rendering="crispEdges">
@@ -2008,8 +1983,7 @@
                   text-anchor="middle" font-family="Arial,sans-serif">Bereit!</text><text x="64" y="40" class="px"
                   font-size="9" text-anchor="middle" font-family="Arial,sans-serif">Warte auf Quiz...</text>
                 <rect x="62" y="50" width="3" height="3" class="px" />
-                <rect x="66" y="52" width="3" height="3" class="px" /><text x="2" y="61" class="px" font-size="8"
-                  text-anchor="start" font-family="Arial,sans-serif">[CLIENT]</text>
+                <rect x="66" y="52" width="3" height="3" class="px" />
               </svg></div>
             <div class="oledLabel"><b>Bereit / Lobby</b> · Wartet auf Start</div>
           </div>
@@ -2065,11 +2039,9 @@
                 shape-rendering="crispEdges">
                 <rect x="0" y="0" width="128" height="64" fill="#05070c" /><text x="64" y="9" class="px" font-size="9"
                   text-anchor="middle" font-family="Arial,sans-serif">Poti-Challenge</text>
-                <rect x="0" y="12" width="128" height="1" class="px" /><text x="64" y="30" class="px" font-size="18"
-                  text-anchor="middle" font-family="Arial,sans-serif">Ziel: 75%</text><text x="64" y="47" class="px"
-                  font-size="9" text-anchor="middle" font-family="Arial,sans-serif">Jetzt: 62%</text>
+                <rect x="0" y="12" width="128" height="1" class="px" /><text x="64" y="38" class="px" font-size="18"
+                  text-anchor="middle" font-family="Arial,sans-serif">Ziel: 75%</text>
                 <rect x="2" y="54" width="124" height="8" fill="none" stroke="#cfe9ff" stroke-width="1" />
-                <rect x="2" y="54" width="77" height="8" fill="#cfe9ff" />
                 <rect x="95" y="51" width="1" height="13" class="px" />
               </svg></div>
             <div class="oledLabel"><b>Poti-Target</b> · Auf Zielwert drehen</div>
@@ -2154,6 +2126,20 @@
             <div class="oledLabel"><b>Reveal: falsch</b> · eigene Wahl daneben</div>
           </div>
 
+          <!-- Quiz beendet -->
+          <div class="oledCell">
+            <div class="oledFrame"><svg viewBox="0 0 128 64" xmlns="http://www.w3.org/2000/svg"
+                shape-rendering="crispEdges">
+                <rect x="0" y="0" width="128" height="64" fill="#05070c" />
+                <text x="64" y="9" class="px" font-size="9" text-anchor="middle" font-family="Arial,sans-serif">AALeC Quiz</text>
+                <rect x="0" y="12" width="128" height="1" class="px" />
+                <text x="64" y="28" class="pxw" font-size="13" text-anchor="middle" font-family="Arial,sans-serif">Quiz beendet!</text>
+                <text x="64" y="44" class="px" font-size="9" text-anchor="middle" font-family="Arial,sans-serif">Neu starten?</text>
+                <text x="64" y="57" class="px" font-size="7" text-anchor="middle" font-family="Arial,sans-serif">Druecken zum Neustart</text>
+              </svg></div>
+            <div class="oledLabel"><b>Quiz beendet</b> · Neustart per Tastendruck</div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -2234,6 +2220,97 @@
               <div style="border-left:2px solid var(--blue);padding-left:12px">
                 <p style="font-size:18px;font-weight:600;color:var(--text)">mqtt.js Integration</p>
                 <p style="font-size:16px;color:var(--muted);line-height:1.4">Abonniert den Broker direkt im Browser über WebSockets (Port 9001), um sofort auf Zustandsänderungen zu reagieren.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SLIDE — BIBLIOTHEKEN ========== -->
+    <section class="slide" id="slibs">
+      <div class="sh">
+        <div class="sh-label">05b — Bibliotheken</div>
+        <h2>Verwendete Bibliotheken</h2>
+      </div>
+      <div class="sc" style="padding-top:24px;align-items:start">
+        <div class="g3" style="gap:28px;width:100%;align-items:start">
+
+          <!-- Firmware -->
+          <div class="card" style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="mono" style="font-size:16px;font-weight:700;color:var(--orange);background:rgba(245,167,51,.1);border:1px solid rgba(245,167,51,.3);border-radius:8px;padding:4px 10px">C++</span>
+              <span style="font-size:21px;font-weight:700">Firmware</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">PubSubClient</span>
+                <span style="font-size:15px;color:var(--muted)">MQTT-Kommunikation</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">ArduinoJson</span>
+                <span style="font-size:15px;color:var(--muted)">JSON serialisieren / parsen</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">ESP8266WiFi</span>
+                <span style="font-size:15px;color:var(--muted)">WLAN-Verbindung</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">SSD1306Wire</span>
+                <span style="font-size:15px;color:var(--muted)">OLED-Display (I²C)</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">Adafruit_BME680</span>
+                <span style="font-size:15px;color:var(--muted)">Temperatursensor</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">NeoPixelBus</span>
+                <span style="font-size:15px;color:var(--muted)">WS2812B RGB-LEDs</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backend -->
+          <div class="card" style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="mono" style="font-size:16px;font-weight:700;color:var(--green);background:rgba(37,209,110,.1);border:1px solid rgba(37,209,110,.3);border-radius:8px;padding:4px 10px">Py</span>
+              <span style="font-size:21px;font-weight:700">Backend</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">Flask</span>
+                <span style="font-size:15px;color:var(--muted)">REST-API</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">paho-mqtt</span>
+                <span style="font-size:15px;color:var(--muted)">MQTT-Client (Game Master)</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">python-dotenv</span>
+                <span style="font-size:15px;color:var(--muted)">Konfiguration via .env</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Frontend -->
+          <div class="card" style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="mono" style="font-size:16px;font-weight:700;color:var(--blue);background:rgba(77,142,240,.1);border:1px solid rgba(77,142,240,.3);border-radius:8px;padding:4px 10px">TS</span>
+              <span style="font-size:21px;font-weight:700">Frontend</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">Next.js / React</span>
+                <span style="font-size:15px;color:var(--muted)">UI-Framework</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">mqtt.js</span>
+                <span style="font-size:15px;color:var(--muted)">MQTT über WebSocket (Port 9001)</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span class="mono" style="font-size:17px;color:var(--cyan)">Tailwind CSS</span>
+                <span style="font-size:15px;color:var(--muted)">Styling</span>
               </div>
             </div>
           </div>
@@ -2987,135 +3064,90 @@
         <div class="sh-label">11 — CI/CD Pipeline</div>
         <h2>GitHub Actions — Build, Push, Release</h2>
       </div>
-      <div class="sc" style="padding-top:18px;align-items:start">
+      <div class="sc" style="justify-content:center;align-items:center">
+        <svg viewBox="0 0 1600 520" style="width:100%;max-width:1700px" font-family="Inter,sans-serif">
+          <defs>
+            <marker id="ci-arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0,8 3,0 6" fill="#4e6280"/>
+            </marker>
+            <marker id="ci-arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0,8 3,0 6" fill="#25d16e"/>
+            </marker>
+          </defs>
 
-        <!-- Trigger row -->
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;flex-wrap:wrap">
-          <span
-            style="font-size:16px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);flex-shrink:0">Trigger:</span>
-          <span
-            style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:18px"><span
-              class="mono" style="color:var(--green)">push</span><span style="color:var(--muted)">main ·
-              feat/**</span></span>
-          <span
-            style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:18px"><span
-              class="mono" style="color:var(--orange)">tag</span><span style="color:var(--muted)">v*</span></span>
-          <span
-            style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:18px"><span
-              class="mono" style="color:var(--blue)">pull_request</span><span style="color:var(--muted)">→
-              main</span></span>
-          <span
-            style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:18px"><span
-              class="mono" style="color:var(--muted)">workflow_dispatch</span></span>
-        </div>
+          <!-- ── Git Push / Tag (Trigger) ── -->
+          <rect x="20" y="180" width="220" height="160" rx="14" fill="#0d1422" stroke="#1e2d47" stroke-width="1.5"/>
+          <text x="130" y="218" text-anchor="middle" fill="#4e6280" font-size="13" font-weight="600" letter-spacing="2">TRIGGER</text>
+          <text x="130" y="252" text-anchor="middle" fill="#dce8f8" font-size="20" font-weight="600">git push</text>
+          <text x="130" y="278" text-anchor="middle" fill="#4e6280" font-size="16">main · feat/** · v*</text>
+          <text x="130" y="302" text-anchor="middle" fill="#4e6280" font-size="16">pull_request</text>
 
-        <!-- Pipeline diagram: 3 jobs -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;width:100%">
+          <!-- arrow from trigger to firmware -->
+          <line x1="240" y1="260" x2="308" y2="260" stroke="#4e6280" stroke-width="2" marker-end="url(#ci-arr)"/>
 
-          <!-- Job 1: Firmware -->
-          <div
-            style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden">
-            <div
-              style="padding:16px 20px;background:rgba(245,167,51,.1);border-bottom:1px solid rgba(245,167,51,.25);display:flex;align-items:center;gap:12px">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--orange)" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none" />
-              </svg>
-              <p style="font-size:20px;font-weight:700;color:var(--orange)">build-firmware</p>
-            </div>
-            <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--surface);flex:1">
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">1.</span>
-                <p style="font-size:18px">Cache PlatformIO-Pakete</p>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">2.</span>
-                <p style="font-size:18px"><span class="mono" style="color:var(--orange)">pio run</span> — kompiliert
-                  ESP8266-Firmware</p>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">3.</span>
-                <p style="font-size:18px">Artifact: <span class="mono" style="color:var(--cyan)">firmware.bin</span></p>
-              </div>
-              <div
-                style="margin-top:6px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:16px;color:var(--muted)">
-                läuft bei jedem Push &amp; PR</div>
-            </div>
-          </div>
+          <!-- ── build-firmware ── -->
+          <rect x="310" y="140" width="280" height="240" rx="14" fill="#0d1422" stroke="rgba(245,167,51,.4)" stroke-width="1.5"/>
+          <rect x="310" y="140" width="280" height="44" rx="14" fill="rgba(245,167,51,.12)"/>
+          <rect x="310" y="168" width="280" height="16" fill="rgba(245,167,51,.12)"/>
+          <text x="450" y="169" text-anchor="middle" fill="#f5a733" font-size="18" font-weight="700">build-firmware</text>
+          <text x="450" y="212" text-anchor="middle" fill="#4e6280" font-size="15">PlatformIO</text>
+          <text x="450" y="238" text-anchor="middle" fill="#dce8f8" font-size="17">pio run</text>
+          <text x="450" y="270" text-anchor="middle" fill="#4e6280" font-size="15">ESP8266 kompilieren</text>
+          <!-- artifact badge -->
+          <rect x="370" y="300" width="160" height="34" rx="8" fill="#0a1012" stroke="rgba(0,212,255,.3)" stroke-width="1"/>
+          <text x="450" y="322" text-anchor="middle" fill="#00d4ff" font-size="15" font-family="JetBrains Mono,monospace">firmware.bin</text>
 
-          <!-- Job 2: Containers -->
-          <div
-            style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden">
-            <div
-              style="padding:16px 20px;background:rgba(0,212,255,.08);border-bottom:1px solid rgba(0,212,255,.2);display:flex;align-items:center;gap:12px">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--cyan)" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="7" width="20" height="14" rx="2" />
-                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-                <line x1="12" y1="12" x2="12" y2="16" />
-                <line x1="10" y1="14" x2="14" y2="14" />
-              </svg>
-              <p style="font-size:20px;font-weight:700;color:var(--cyan)">build-containers</p>
-            </div>
-            <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--surface);flex:1">
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">1.</span>
-                <p style="font-size:18px">Docker Buildx + GHA-Cache</p>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">2.</span>
-                <p style="font-size:18px">Build Backend-Image <span class="mono"
-                    style="color:var(--cyan)">its-backend</span></p>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">3.</span>
-                <p style="font-size:18px">Build Frontend-Image <span class="mono"
-                    style="color:var(--cyan)">its-frontend</span></p>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">4.</span>
-                <p style="font-size:18px">Push zu <span class="mono" style="color:var(--green)">ghcr.io</span> (nur
-                  main/tag, nicht PR)</p>
-              </div>
-              <div
-                style="margin-top:6px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:16px;color:var(--muted)">
-                Tags: branch · SHA · <span class="mono">latest</span> nur auf main</div>
-            </div>
-          </div>
+          <!-- arrow firmware → containers (parallel) -->
+          <line x1="590" y1="200" x2="658" y2="200" stroke="#4e6280" stroke-width="2" marker-end="url(#ci-arr)"/>
+          <!-- arrow firmware → release (needs) -->
+          <line x1="590" y1="320" x2="1058" y2="320" stroke="rgba(37,209,110,.5)" stroke-width="1.5" stroke-dasharray="8 4" marker-end="url(#ci-arr-g)"/>
+          <text x="820" y="312" text-anchor="middle" fill="rgba(37,209,110,.6)" font-size="13">needs</text>
 
-          <!-- Job 3: Release -->
-          <div
-            style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden">
-            <div
-              style="padding:16px 20px;background:rgba(37,209,110,.08);border-bottom:1px solid rgba(37,209,110,.2);display:flex;align-items:center;gap:12px">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--green)" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path
-                  d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-              </svg>
-              <p style="font-size:20px;font-weight:700;color:var(--green)">create-release</p>
-            </div>
-            <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--surface);flex:1">
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">1.</span>
-                <p style="font-size:18px">Wartet auf <span style="color:var(--orange)">build-firmware</span></p>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">2.</span>
-                <p style="font-size:18px">Lädt <span class="mono" style="color:var(--cyan)">firmware.bin</span> als
-                  Artifact runter</p>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start">
-                <span style="color:var(--muted);font-size:18px;flex-shrink:0;margin-top:1px">3.</span>
-                <p style="font-size:18px">Erstellt GitHub Release mit automatischen Release Notes</p>
-              </div>
-              <div
-                style="margin-top:6px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:16px;color:var(--muted)">
-                nur bei <span class="mono" style="color:var(--orange)">v*</span>-Tags ausgelöst</div>
-            </div>
-          </div>
+          <!-- ── build-containers ── -->
+          <rect x="660" y="80" width="280" height="300" rx="14" fill="#0d1422" stroke="rgba(0,212,255,.3)" stroke-width="1.5"/>
+          <rect x="660" y="80" width="280" height="44" rx="14" fill="rgba(0,212,255,.08)"/>
+          <rect x="660" y="108" width="280" height="16" fill="rgba(0,212,255,.08)"/>
+          <text x="800" y="109" text-anchor="middle" fill="#00d4ff" font-size="18" font-weight="700">build-containers</text>
+          <text x="800" y="148" text-anchor="middle" fill="#4e6280" font-size="15">Docker Buildx</text>
+          <!-- backend badge -->
+          <rect x="700" y="162" width="200" height="32" rx="7" fill="#0a1012" stroke="#1e2d47" stroke-width="1"/>
+          <text x="800" y="183" text-anchor="middle" fill="#dce8f8" font-size="15" font-family="JetBrains Mono,monospace">its-backend</text>
+          <!-- frontend badge -->
+          <rect x="700" y="204" width="200" height="32" rx="7" fill="#0a1012" stroke="#1e2d47" stroke-width="1"/>
+          <text x="800" y="225" text-anchor="middle" fill="#dce8f8" font-size="15" font-family="JetBrains Mono,monospace">its-frontend</text>
 
-        </div>
+          <text x="800" y="264" text-anchor="middle" fill="#4e6280" font-size="14">Push zu ghcr.io</text>
+          <text x="800" y="284" text-anchor="middle" fill="#4e6280" font-size="13">nur main / tag (nicht PR)</text>
+
+          <!-- ghcr badge -->
+          <rect x="700" y="296" width="200" height="32" rx="7" fill="#0a1012" stroke="rgba(0,212,255,.25)" stroke-width="1"/>
+          <text x="800" y="317" text-anchor="middle" fill="#00d4ff" font-size="15" font-family="JetBrains Mono,monospace">ghcr.io</text>
+
+          <!-- arrow containers → ghcr already shown inline -->
+          <line x1="940" y1="200" x2="1008" y2="200" stroke="#4e6280" stroke-width="2" marker-end="url(#ci-arr)"/>
+
+          <!-- ── create-release ── (only on v* tag) -->
+          <rect x="1060" y="140" width="280" height="240" rx="14" fill="#0d1422" stroke="rgba(37,209,110,.3)" stroke-width="1.5"/>
+          <rect x="1060" y="140" width="280" height="44" rx="14" fill="rgba(37,209,110,.07)"/>
+          <rect x="1060" y="168" width="280" height="16" fill="rgba(37,209,110,.07)"/>
+          <text x="1200" y="169" text-anchor="middle" fill="#25d16e" font-size="18" font-weight="700">create-release</text>
+          <text x="1200" y="210" text-anchor="middle" fill="#4e6280" font-size="14">nur bei v*-Tag</text>
+          <text x="1200" y="240" text-anchor="middle" fill="#dce8f8" font-size="17">GitHub Release</text>
+          <text x="1200" y="265" text-anchor="middle" fill="#4e6280" font-size="15">+ Release Notes</text>
+          <!-- artifact badge -->
+          <rect x="1120" y="285" width="160" height="34" rx="8" fill="#0a1012" stroke="rgba(0,212,255,.3)" stroke-width="1"/>
+          <text x="1200" y="307" text-anchor="middle" fill="#00d4ff" font-size="15" font-family="JetBrains Mono,monospace">firmware.bin</text>
+
+          <!-- arrow release → github release output -->
+          <line x1="1340" y1="260" x2="1408" y2="260" stroke="#4e6280" stroke-width="2" marker-end="url(#ci-arr)"/>
+
+          <!-- ── GitHub Release output ── -->
+          <rect x="1410" y="180" width="170" height="160" rx="14" fill="#0d1422" stroke="#1e2d47" stroke-width="1.5"/>
+          <text x="1495" y="222" text-anchor="middle" fill="#4e6280" font-size="13" font-weight="600" letter-spacing="2">OUTPUT</text>
+          <text x="1495" y="256" text-anchor="middle" fill="#25d16e" font-size="17" font-weight="600">Release</text>
+          <text x="1495" y="280" text-anchor="middle" fill="#4e6280" font-size="14">v2026.x.x</text>
+          <text x="1495" y="302" text-anchor="middle" fill="#00d4ff" font-size="13" font-family="JetBrains Mono,monospace">firmware.bin</text>
+        </svg>
       </div>
     </section>
 
@@ -3172,91 +3204,142 @@
       </div>
     </section>
 
+    <!-- ========== SLIDE — SETUP & KONFIGURATION ========== -->
+    <section class="slide" id="ssetup">
+      <div class="sh">
+        <div class="sh-label">11b — Setup &amp; Konfiguration</div>
+        <h2>Projekt einrichten &amp; starten</h2>
+      </div>
+      <div class="sc" style="padding-top:24px;align-items:start">
+        <div class="g3" style="gap:28px;width:100%;align-items:start">
+
+          <!-- Schritt 1: Konfiguration -->
+          <div class="card" style="display:flex;flex-direction:column;gap:16px">
+            <div style="font-size:21px;font-weight:700">1 — Konfiguration</div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <div style="font-size:17px;color:var(--muted);margin-bottom:6px">Firmware — <span class="mono" style="color:var(--orange)">config.h</span></div>
+                <div class="code" style="font-size:15px;line-height:1.7">
+                  <div><span class="cmt">// WLAN</span></div>
+                  <div><span class="kw">#define</span> WIFI_SSID <span class="str">"AALeC-Quiz"</span></div>
+                  <div><span class="kw">#define</span> WIFI_PASSWORD <span class="str">"12345678"</span></div>
+                  <div style="margin-top:8px"><span class="cmt">// MQTT-Broker</span></div>
+                  <div><span class="kw">#define</span> MQTT_BROKER <span class="str">"MacBook.local"</span></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:17px;color:var(--muted);margin-bottom:6px">Backend — <span class="mono" style="color:var(--green)">.env</span></div>
+                <div class="code" style="font-size:15px;line-height:1.7">
+                  <div>MQTT_HOST=<span class="str">localhost</span></div>
+                  <div>MQTT_PORT=<span class="val">1883</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Schritt 2: Server starten -->
+          <div class="card" style="display:flex;flex-direction:column;gap:16px">
+            <div style="font-size:21px;font-weight:700">2 — Server starten</div>
+            <p style="font-size:18px;color:var(--muted)">MQTT-Broker, Backend und Frontend starten:</p>
+            <div class="code" style="font-size:17px;line-height:1.75">
+              <div><span class="fn">docker-compose</span> up <span class="val">-d</span></div>
+            </div>
+            <p style="font-size:16px;color:var(--muted)">Startet drei Container:</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;justify-content:space-between;font-size:16px;border-bottom:1px solid var(--border);padding-bottom:6px">
+                <span class="mono" style="color:var(--cyan)">mosquitto</span>
+                <span style="color:var(--muted)">MQTT-Broker :1883 / :9001</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:16px;border-bottom:1px solid var(--border);padding-bottom:6px">
+                <span class="mono" style="color:var(--green)">game-master</span>
+                <span style="color:var(--muted)">Backend / API :8080</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:16px">
+                <span class="mono" style="color:var(--blue)">frontend</span>
+                <span style="color:var(--muted)">Web-UI :3000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Schritt 3: Netzwerk -->
+          <div class="card" style="display:flex;flex-direction:column;gap:16px">
+            <div style="font-size:21px;font-weight:700">3 — Netzwerk</div>
+            <p style="font-size:18px;color:var(--muted)">Mac als WLAN-Hotspot mit fester SSID:</p>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;font-size:17px;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span style="color:var(--muted)">SSID</span>
+                <span class="mono" style="color:var(--orange)">AALeC-Quiz</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:17px;border-bottom:1px solid var(--border);padding-bottom:8px">
+                <span style="color:var(--muted)">Passwort</span>
+                <span class="mono" style="color:var(--orange)">12345678</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:17px">
+                <span style="color:var(--muted)">Broker</span>
+                <span class="mono" style="color:var(--cyan)">MacBook-Pro-von-Florian.local</span>
+              </div>
+            </div>
+            <p style="font-size:16px;color:var(--muted);margin-top:4px">Controller verbinden sich automatisch sobald WLAN und Broker erreichbar sind.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
     <!-- ========== SLIDE 9 — SETUP ========== -->
     <section class="slide" id="s10">
       <div class="sh">
         <div class="sh-label">12 — Installation</div>
-        <h2>Firmware flashen in 2 Schritten</h2>
+        <h2>Firmware flashen</h2>
       </div>
-      <div class="sc" style="align-items:start;padding-top:24px">
-        <div class="col" style="gap:40px;width:100%">
+      <div class="sc" style="align-items:start;padding-top:24px;flex-direction:column;gap:48px">
 
-          <!-- Schritt 1: Download -->
-          <div class="step">
-            <div class="step-num">1</div>
-            <div class="step-body">
-              <div class="step-title">Neueste <span class="mono" style="color:var(--orange)">firmware.bin</span> von
-                GitHub Releases laden</div>
-              <div
-                style="margin-top:14px;display:flex;align-items:center;gap:20px;padding:18px 26px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--blue)" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
-                  <path
-                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-                </svg>
-                <div>
-                  <span class="mono" style="font-size:20px;color:var(--blue)">github.com/XplorodoX/ITS</span>
-                  <span style="color:var(--muted);font-size:18px"> → </span>
-                  <span class="mono" style="font-size:20px;color:var(--orange)">Releases</span>
-                  <span style="color:var(--muted);font-size:18px"> → </span>
-                  <span class="pill pill-orange" style="font-size:16px;vertical-align:middle">firmware.bin</span>
-                  <span style="color:var(--muted);font-size:18px"> herunterladen</span>
-                </div>
-              </div>
+        <!-- Hauptmethode: flash.py -->
+        <div class="col" style="gap:16px;width:100%">
+          <div style="display:flex;align-items:baseline;gap:16px">
+            <h3>flash.py</h3>
+            <span style="font-size:20px;color:var(--muted)">— lädt Firmware automatisch von GitHub und erkennt den USB-Port</span>
+          </div>
+          <div class="code" style="font-size:19px;line-height:1.75">
+            <div><span class="cmt"># Repo klonen</span></div>
+            <div><span class="fn">git</span> clone <span class="str">https://github.com/XplorodoX/ITS.git</span></div>
+            <div><span class="fn">cd</span> ITS</div>
+            <div style="margin-top:12px"><span class="cmt"># Abhängigkeit installieren</span></div>
+            <div><span class="fn">pip</span> install <span class="str">esptool</span></div>
+            <div style="margin-top:12px"><span class="cmt"># Flashen</span></div>
+            <div><span class="fn">python3</span> flash.py</div>
+          </div>
+        </div>
+
+        <!-- Trennlinie -->
+        <div style="width:100%;height:1px;background:var(--border)"></div>
+
+        <!-- Alternativen -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;width:100%">
+
+          <!-- Web-Flasher -->
+          <div class="col" style="gap:12px">
+            <div style="font-size:22px;font-weight:600;color:var(--muted)">Browser (kein Python nötig)</div>
+            <p style="font-size:20px;color:var(--muted)"><span class="mono" style="color:var(--orange)">firmware.bin</span> von GitHub Releases laden, dann im Browser flashen:</p>
+            <div style="padding:16px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
+              <span class="mono" style="font-size:20px;color:var(--cyan)">esptool.spacehuhn.com</span>
             </div>
           </div>
 
-          <!-- Schritt 2: Flashen Linux / Windows -->
-          <div class="step">
-            <div class="step-num">2</div>
-            <div class="step-body">
-              <div class="step-title">Firmware flashen — Controller per USB verbinden, dann:</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:14px">
-
-                <!-- Linux / macOS -->
-                <div>
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="var(--muted)" style="flex-shrink:0">
-                      <path
-                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
-                    </svg>
-                    <span style="font-size:19px;font-weight:600;color:var(--green)">Linux / macOS</span>
-                  </div>
-                  <div class="code" style="font-size:16px;line-height:1.6">
-                    <span class="cmt"># Methode A (Automatisch - Empfohlen)</span>
-                    <span class="fn">python3</span> flash.py
-
-                    <span class="cmt"># Methode B (Manuell)</span>
-                    <span class="fn">python3</span> -m esptool <span class="val">--port</span> [port] <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
-                  </div>
-                </div>
-
-                <!-- Windows -->
-                <div>
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="var(--muted)" style="flex-shrink:0">
-                      <path
-                        d="M3 12V6.75l6-1.32v6.57H3zm17-9v8.75h-7V3.91L20 3zM3 21v-5.25h6v6.57L3 21zm17 .75l-7-1.32V13h7v8.75z" />
-                    </svg>
-                    <span style="font-size:19px;font-weight:600;color:var(--blue)">Windows</span>
-                  </div>
-                  <div class="code" style="font-size:16px;line-height:1.6">
-                    <span class="cmt"># Methode A (Automatisch - Empfohlen)</span>
-                    <span class="fn">python</span> flash.py
-
-                    <span class="cmt"># Methode B (Manuell)</span>
-                    <span class="fn">python</span> -m esptool <span class="val">--port</span> COM3 <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span>
-                  </div>
-                </div>
-
-              </div>
-              <p style="margin-top:14px;font-size:17px;color:var(--muted)">
-                Das Python-Skript <span class="mono" style="color:var(--green)">flash.py</span> lädt automatisch die neueste Release-Firmware von GitHub und erkennt den USB-Port.
-              </p>
+          <!-- Manuell -->
+          <div class="col" style="gap:12px">
+            <div style="font-size:22px;font-weight:600;color:var(--muted)">Manuell (Terminal)</div>
+            <p style="font-size:20px;color:var(--muted)"><span class="mono" style="color:var(--orange)">firmware.bin</span> von GitHub Releases laden, dann:</p>
+            <div class="code" style="font-size:17px;line-height:1.75">
+              <div><span class="cmt"># macOS / Linux</span></div>
+              <div><span class="fn">python3</span> -m esptool <span class="val">--port</span> [port] <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span></div>
+              <div style="margin-top:12px"><span class="cmt"># Windows</span></div>
+              <div><span class="fn">python</span> -m esptool <span class="val">--port</span> COM3 <span class="val">--baud</span> 115200 write_flash <span class="val">0x0</span> <span class="str">firmware.bin</span></div>
             </div>
           </div>
 
         </div>
+
       </div>
     </section>
 
@@ -3367,58 +3450,39 @@
       <div class="sc" style="flex-direction:column;align-items:stretch;padding:20px 100px 36px">
         <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:20px;flex:1;min-height:0">
           <div class="outlook-item" style="flex-direction:column;align-items:flex-start;gap:14px;padding:28px 32px">
-            <div class="outlook-icon" style="color:var(--blue);width:auto"><svg viewBox="0 0 24 24" width="28"
-                height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <polyline points="16 18 22 12 16 6" />
-                <polyline points="8 6 2 12 8 18" />
+            <div class="outlook-icon" style="color:var(--blue);width:auto"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
               </svg></div>
             <div>
-              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">OTA-Firmware-Update</div>
-              <div class="outlook-sub" style="font-size:18px">Firmware direkt über WLAN auf den Controller flashen —
-                kein USB-Kabel mehr nötig</div>
+              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Persistenz &amp; Highscores</div>
+              <div class="outlook-sub" style="font-size:18px">Datenbank für Spielhistorie, Highscores und Auswertung pro Spieler über mehrere Sessions</div>
             </div>
           </div>
           <div class="outlook-item" style="flex-direction:column;align-items:flex-start;gap:14px;padding:28px 32px">
-            <div class="outlook-icon" style="color:var(--green);width:auto"><svg viewBox="0 0 24 24" width="28"
-                height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            <div class="outlook-icon" style="color:var(--green);width:auto"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg></div>
             <div>
               <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Fragen-Editor im Admin-Panel</div>
-              <div class="outlook-sub" style="font-size:18px">Fragen direkt im Browser erstellen und bearbeiten statt
-                JSON-Datei manuell zu pflegen</div>
+              <div class="outlook-sub" style="font-size:18px">Fragen direkt im Browser erstellen und bearbeiten statt JSON-Datei manuell zu pflegen</div>
             </div>
           </div>
           <div class="outlook-item" style="flex-direction:column;align-items:flex-start;gap:14px;padding:28px 32px">
-            <div class="outlook-icon" style="color:var(--orange);width:auto"><svg viewBox="0 0 24 24" width="28"
-                height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
+            <div class="outlook-icon" style="color:var(--orange);width:auto"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg></div>
             <div>
-              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Zeitbasierte Punktevergabe</div>
-              <div class="outlook-sub" style="font-size:18px">Schnellere Antworten bringen mehr Punkte — Countdown wird
-                auf OLED und Beamer angezeigt</div>
+              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Anti-Cheat</div>
+              <div class="outlook-sub" style="font-size:18px">Mehrfachabstimmung und Zeitmanipulation serverseitig erkennen und verhindern</div>
             </div>
           </div>
           <div class="outlook-item" style="flex-direction:column;align-items:flex-start;gap:14px;padding:28px 32px">
-            <div class="outlook-icon" style="color:var(--cyan);width:auto"><svg viewBox="0 0 24 24" width="28"
-                height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10" />
-                <line x1="12" y1="20" x2="12" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="14" />
-                <line x1="2" y1="20" x2="22" y2="20" />
+            <div class="outlook-icon" style="color:var(--cyan);width:auto"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
               </svg></div>
             <div>
-              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Mehrrundenspiel &amp; Statistiken
-              </div>
-              <div class="outlook-sub" style="font-size:18px">Punktestand über mehrere Runden persistent — Auswertung
-                pro Spieler und Frage</div>
+              <div class="outlook-title" style="font-size:22px;margin-bottom:6px">Bilderfragen</div>
+              <div class="outlook-sub" style="font-size:18px">Bilder direkt zur Frage auf dem Beamer anzeigen für visuellere Fragetypen</div>
             </div>
           </div>
         </div>

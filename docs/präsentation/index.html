@@ -69,7 +69,7 @@
       color: var(--text);
       opacity: 0;
       pointer-events: none;
-      transition: opacity .45s ease;
+      transition: opacity .12s ease;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -1117,6 +1117,11 @@
       padding: 14px 28px;
       border: 1px solid var(--border);
       border-radius: 10px
+    }
+
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-delay: 0s !important;
     }
   </style>
 </head>
@@ -3729,12 +3734,6 @@
             </div>
           </div>
 
-        </div>
-        <div style="display:flex;justify-content:center;margin-top:40px">
-          <div style="padding:14px 28px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:17px;color:var(--muted);text-align:center;line-height:1.8">
-            PDF exportieren:<br>
-            <span style="color:var(--cyan)">python3 docs/präsentation/export_pdf.py</span>
-          </div>
         </div>
       </div>
     </section>

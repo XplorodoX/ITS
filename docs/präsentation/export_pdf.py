@@ -65,12 +65,32 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--no-sandbox"])
 
-        # Viewport = 1920×1080 → JS-scale() ergibt s=1.0, kein Transform
-        page = browser.new_page(viewport={"width": 1920, "height": 1080})
+        # Viewport = 1920×1080, device_scale_factor=2 → Screenshots in 4K (3840×2160)
+        page = browser.new_page(viewport={"width": 1920, "height": 1080}, device_scale_factor=2)
 
         print("Lade Präsentation …")
         page.goto(html.as_uri(), wait_until="networkidle")
         page.wait_for_timeout(1500)  # Fonts, SVGs, Animationen
+
+        # Transitions + UI deaktivieren
+        page.add_style_tag(content="""
+            .slide { transition: none !important; }
+            #nav, #snum, #fsbtn { display: none !important; }
+        """)
+
+        # Alle Animations-Startzustände (opacity:0) sofort in Endzustand bringen
+        page.evaluate("""
+            () => {
+                document.querySelectorAll('*').forEach(el => {
+                    const s = el.style;
+                    if (s.opacity === '0' && s.animation) {
+                        s.opacity = '1';
+                        s.transform = 'none';
+                        s.animation = 'none';
+                    }
+                });
+            }
+        """)
 
         # Anzahl Folien und IDs direkt aus dem DOM lesen
         slide_ids = page.evaluate("""
@@ -83,15 +103,33 @@ def main():
             label = sid if sid else f"Folie {i+1}"
             print(f"  [{i+1:02d}/{total}] #{label}", end="", flush=True)
 
-            # Direkte DOM-Manipulation — go() ist in IIFE und nicht global erreichbar
             page.evaluate(f"""
                 () => {{
                     document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
-                    const s = document.querySelectorAll('.slide')[{i}];
-                    if (s) s.classList.add('active');
+                    const slide = document.querySelectorAll('.slide')[{i}];
+                    if (!slide) return;
+                    slide.classList.add('active');
+
+                    // CSS-Klassen-basierte Animationen auslösen (restartAnims ist in IIFE)
+                    ['.stack-card', '.s2-point', '.step', '.prob',
+                     '.outlook-item', '.qcard', '.mqtt-topic'].forEach(sel => {{
+                        slide.querySelectorAll(sel).forEach(el => el.classList.add('go'));
+                    }});
+
+                    // Alle verbleibenden opacity:0-Elemente (inline oder CSS) sichtbar machen
+                    slide.querySelectorAll('*').forEach(el => {{
+                        if (el.style.opacity === '0') {{
+                            el.style.opacity = '1';
+                            el.style.animation = 'none';
+                            el.style.transform = 'none';
+                        }}
+                        if (parseFloat(window.getComputedStyle(el).opacity) < 0.05) {{
+                            el.style.opacity = '1';
+                        }}
+                    }});
                 }}
             """)
-            page.wait_for_timeout(150)  # CSS-Transition abwarten
+            page.wait_for_timeout(80)  # kurz für DOM-Paint
 
             raw = page.screenshot(full_page=False)
             images.append(Image.open(io.BytesIO(raw)).convert("RGB"))
